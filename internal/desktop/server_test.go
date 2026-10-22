@@ -98,3 +98,18 @@ func TestFlashRefusesMissingFirmware(t *testing.T) {
 		t.Fatalf("flash without index should fail: %d", w.Code)
 	}
 }
+
+// WebKit (via Wails) delivers POST bodies without Content-Length.
+func TestBodyReadWithoutContentLength(t *testing.T) {
+	s, _ := newServer(t)
+	target := filepath.Join(t.TempDir(), "plays")
+	r := httptest.NewRequest("POST", "/api/library/set", strings.NewReader(`{"dir":"`+filepath.ToSlash(target)+`","mode":"switch"}`))
+	r.ContentLength = 0
+	r.Header.Del("Content-Length")
+	r.Header.Set("X-Plays-Token", s.Token)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 200 || s.Settings.Get().LibraryDir != filepath.Clean(target) {
+		t.Fatalf("body ignored without Content-Length: %d %s", w.Code, w.Body)
+	}
+}

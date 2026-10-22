@@ -213,7 +213,9 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		Port     string `json:"port"`
 		Target   string `json:"target"`
 	}
-	if r.ContentLength != 0 {
+	// Always read the body: WebKit's custom-scheme requests carry no Content-Length,
+	// so Wails reports ContentLength 0 even when a JSON body is present.
+	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
 			fail(w, "request", err)
 			return
