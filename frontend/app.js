@@ -228,6 +228,7 @@ const S = {
 function resolveLang() {
   const pref = S.server ? S.server.language : 'auto';
   if (pref === 'zh' || pref === 'en') return pref;
+  if (S.server && S.server.systemLanguage) return S.server.systemLanguage;
   return (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 

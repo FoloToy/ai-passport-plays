@@ -40,6 +40,8 @@ type Server struct {
 	Reveal    func(path string) error
 	OpenURL   func(url string) error
 
+	systemLanguage string
+
 	mu       sync.Mutex
 	catalog  []byte
 	index    *library.Index
@@ -51,7 +53,7 @@ func New(version string, st *settings.Store, sm *syncer.Manager, fm *flasher.Man
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
 	}
-	s := &Server{Version: version, Settings: st, Sync: sm, Flash: fm, Worker: w, Token: hex.EncodeToString(b)}
+	s := &Server{Version: version, Settings: st, Sync: sm, Flash: fm, Worker: w, Token: hex.EncodeToString(b), systemLanguage: settings.SystemLanguage()}
 	sm.OnIndex = s.Invalidate
 	return s
 }
@@ -300,17 +302,18 @@ func (s *Server) state() map[string]any {
 		info["free"] = free
 	}
 	return map[string]any{
-		"version":  s.Version,
-		"platform": runtime.GOOS,
-		"worker":   s.Worker.Available(),
-		"native":   s.ChooseDir != nil,
-		"language": cfg.Language,
-		"library":  info,
-		"sync":     s.Sync.Snapshot(),
-		"update":   s.Sync.Update(),
-		"fetch":    s.Sync.Fetch(),
-		"ready":    readyVersion(s.Sync),
-		"flash":    s.Flash.Snapshot(),
+		"version":        s.Version,
+		"platform":       runtime.GOOS,
+		"worker":         s.Worker.Available(),
+		"native":         s.ChooseDir != nil,
+		"language":       cfg.Language,
+		"systemLanguage": s.systemLanguage,
+		"library":        info,
+		"sync":           s.Sync.Snapshot(),
+		"update":         s.Sync.Update(),
+		"fetch":          s.Sync.Fetch(),
+		"ready":          readyVersion(s.Sync),
+		"flash":          s.Flash.Snapshot(),
 	}
 }
 
