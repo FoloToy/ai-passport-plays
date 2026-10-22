@@ -70,7 +70,7 @@ img { display: block; }
 
 /* ---------- layout ---------- */
 .app { min-height: calc(100vh - 68px); }
-.library { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 24px; max-width: 1320px; margin: 0 auto; padding: 18px 28px 64px 16px; }
+.library { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: 24px; max-width: 1320px; margin: 0 auto; padding: 18px 28px 64px 16px; }
 .sidebar {
   position: sticky; top: 86px; align-self: start;
   background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px;
@@ -83,6 +83,7 @@ img { display: block; }
   padding: 10px 12px; border-radius: 12px; color: #d7dad4; text-align: left; margin-bottom: 4px;
   border: 1px solid transparent;
 }
+.nav-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item i { font-style: normal; color: var(--muted); text-align: center; }
 .nav-item small { color: var(--muted); font-family: var(--mono); font-size: 11px; }
 .nav-item:hover { background: var(--panel-2); }
