@@ -138,6 +138,6 @@ worker 端（esptool）：
 
 ## 12. 待办
 
-- Windows 安装包（Inno Setup，复用 Magic-Flash 脚本）和实机验证。
+- Windows 安装包：脚本已写好（`scripts/build-on-windows.ps1`，见 `docs/WINDOWS-BUILD.md`），待在真实 Windows 上运行和验收。
 - Developer ID 签名、公证；Windows 代码签名。
 - 实机刷机验收（需要连接 AI Passport）。

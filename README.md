@@ -82,7 +82,16 @@ ALLOW_DIRTY=1 scripts/package-mac.sh   # 有未提交改动时也打包
 
 目前**没有 Developer ID 签名和公证**，只做了 ad-hoc 签名。别人第一次打开时 macOS 会拦截，需要在"系统设置 → 隐私与安全性"里点"仍要打开"，或者右键 App 选择"打开"。
 
-Windows 版的代码已经可以交叉编译（串口、单实例锁、磁盘空间都有 Windows 实现），安装包会在下一阶段补上。
+## 打包（Windows）
+
+在 Windows 10/11 x64 上运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1          # 安装依赖并打包
+powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload  # 打包并上传到 Release
+```
+
+会生成 `dist\windows\` 下的 Setup.exe 安装包和免安装 ZIP。完整步骤和排错见 [docs/WINDOWS-BUILD.md](docs/WINDOWS-BUILD.md)。Windows 打包脚本还没有在真实 Windows 上验证过。
 
 ## 许可证
 
