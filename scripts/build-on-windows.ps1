@@ -51,6 +51,7 @@ catch {
 }
 
 git pull --ff-only
+if ($LASTEXITCODE -ne 0) { throw "git pull failed; refusing to package stale sources." }
 & (Join-Path $PSScriptRoot 'package-windows.ps1')
 if ($LASTEXITCODE) { throw "package-windows.ps1 failed ($LASTEXITCODE)" }
 

@@ -91,7 +91,13 @@ func (m *Manager) move(ctx context.Context, from, to string, commit func() error
 	_ = os.Remove(filepath.Join(to, ".DS_Store"))
 	_ = os.Remove(to) // only succeeds when empty; rename needs the target absent
 	if err := os.Rename(from, to); err == nil {
-		return commit()
+		if err := commit(); err != nil {
+			if rollbackErr := os.Rename(to, from); rollbackErr != nil {
+				return fmt.Errorf("save settings: %w; restore library from %s to %s: %v", err, to, from, rollbackErr)
+			}
+			return err
+		}
+		return nil
 	}
 	// Different volume: copy, switch, then delete the old copy.
 	total, files := library.Library{Root: from}.Usage()

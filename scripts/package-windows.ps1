@@ -28,7 +28,7 @@ function Invoke-Checked {
 $pyFile = 'python'; $pyArgs = @()
 if ($env:PLAYS_PYTHON) { $pyFile = $env:PLAYS_PYTHON }
 elseif (Get-Command py -ErrorAction SilentlyContinue) { $pyFile = 'py'; $pyArgs = @('-3.12') }
-Invoke-Checked $pyFile ($pyArgs + @('-c', 'import sys,struct; assert sys.version_info >= (3,12) and struct.calcsize("P")==8, "Need 64-bit Python 3.12+"'))
+Invoke-Checked $pyFile ($pyArgs + @('-c', 'import sys,struct; assert sys.version_info >= (3,12) and struct.calcsize(chr(80))==8'))
 
 $OutputDir = [IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDir))
 $package = Join-Path $OutputDir 'AI Passport Plays'
