@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/FoloToy/ai-passport-plays/frontend"
+	"github.com/FoloToy/ai-passport-plays/internal/factory"
 	"github.com/FoloToy/ai-passport-plays/internal/flasher"
 	"github.com/FoloToy/ai-passport-plays/internal/library"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
@@ -34,9 +35,11 @@ type Server struct {
 	Flash    *flasher.Manager
 	Worker   worker.Runner
 	Token    string
+	// StateDir is the private app folder; the factory firmware is unpacked under it.
+	StateDir string
 
 	// Native hooks; nil in headless development mode.
-	ChooseDir func(current string) (string, error)
+	ChooseDir func(title, current string) (string, error)
 	Reveal    func(path string) error
 	OpenURL   func(url string) error
 
@@ -212,6 +215,8 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		Slug     string `json:"slug"`
 		Port     string `json:"port"`
 		Target   string `json:"target"`
+		// FullBackup defaults to true when omitted.
+		FullBackup *bool `json:"fullBackup"`
 	}
 	// Always read the body: WebKit's custom-scheme requests carry no Content-Length,
 	// so Wails reports ContentLength 0 even when a JSON body is present.
@@ -233,8 +238,25 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		var dir string
-		dir, err = s.ChooseDir(s.Settings.Get().LibraryDir)
+		dir, err = s.ChooseDir("选择玩法存储目录 / Choose library folder", s.Settings.Get().LibraryDir)
 		out = map[string]string{"dir": dir}
+	case "/api/backup/choose":
+		if s.ChooseDir == nil {
+			err, code = errors.New("native folder picker unavailable"), "no_picker"
+			break
+		}
+		var dir string
+		if dir, err = s.ChooseDir("选择备份目录 / Choose backup folder", s.Settings.Get().Backups()); err == nil && dir != "" {
+			code, err = s.setBackupDir(dir)
+		}
+	case "/api/backup/set":
+		code, err = s.setBackupDir(body.Dir)
+	case "/api/restore/start":
+		code, err = s.startRestore(body.FullBackup == nil || *body.FullBackup)
+	case "/api/restore/cancel":
+		if !s.Flash.Cancel() {
+			err, code = errors.New("the restore can no longer be stopped"), "not_cancellable"
+		}
 	case "/api/library/set":
 		code, err = s.setLibrary(body.Dir, body.Mode)
 	case "/api/sync/start":
@@ -316,6 +338,11 @@ func (s *Server) state() map[string]any {
 		"fetch":          s.Sync.Fetch(),
 		"ready":          readyVersion(s.Sync),
 		"flash":          s.Flash.Snapshot(),
+		"restore": map[string]any{
+			"backupDir":        cfg.Backups(),
+			"defaultBackupDir": settings.DefaultBackupDir(),
+			"firmware":         factory.Version,
+		},
 	}
 }
 
@@ -390,16 +417,66 @@ func (s *Server) startFlash(slug, port string) (string, error) {
 	if port == "" {
 		return "port", errors.New("choose a serial port")
 	}
-	job := flasher.Job{Slug: slug, Port: port, Image: s.library().FirmwarePath(slug), SHA256: sha, Size: size, Baud: 460800}
+	job := flasher.Job{Slug: slug, Port: port, Image: s.library().FirmwarePath(slug), SHA256: sha, Size: size, Baud: 460800,
+		BackupDir: s.Settings.Get().Backups()}
 	if err := s.Flash.Start(job); err != nil {
 		return "busy", err
 	}
 	return "", nil
 }
 
+func (s *Server) startRestore(fullBackup bool) (string, error) {
+	if s.StateDir == "" {
+		return "firmware", errors.New("no folder for the factory firmware")
+	}
+	fw, err := factory.Extract(filepath.Join(s.StateDir, "factory-firmware"))
+	if err != nil {
+		return "firmware", err
+	}
+	job := flasher.RestoreJob{FirmwareDir: fw, BackupDir: s.Settings.Get().Backups(), FullBackup: fullBackup}
+	if err := os.MkdirAll(job.BackupDir, 0o755); err != nil {
+		return "backup_dir", err
+	}
+	if err := s.Flash.StartRestore(job); err != nil {
+		return "busy", err
+	}
+	return "", nil
+}
+
+func (s *Server) setBackupDir(dir string) (string, error) {
+	if s.Flash.Active() {
+		return "busy", errors.New("a device job is running")
+	}
+	dir = strings.TrimSpace(dir)
+	if dir == "" || !filepath.IsAbs(dir) {
+		return "path", errors.New("choose an absolute folder path")
+	}
+	dir = filepath.Clean(dir)
+	if dir == filepath.Clean(settings.DefaultBackupDir()) {
+		dir = ""
+	}
+	_, err := s.Settings.Update(func(c *settings.Settings) { c.BackupDir = dir })
+	return "other", err
+}
+
 func (s *Server) reveal(target, slug string) error {
 	if s.Reveal == nil {
 		return errors.New("not available")
+	}
+	switch target {
+	case "backup":
+		dir := s.Settings.Get().Backups()
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		return s.Reveal(dir)
+	case "restore-session":
+		// Only the folder the last restore reported; never a path from the page.
+		dir := s.Flash.Snapshot().Session
+		if dir == "" {
+			return errors.New("no restore backup yet")
+		}
+		return s.Reveal(dir)
 	}
 	lib := s.library()
 	if lib.Root == "" {

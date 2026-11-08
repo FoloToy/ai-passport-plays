@@ -1,10 +1,12 @@
 import hashlib
 import importlib.util
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
+sys.path.insert(0, str(Path(__file__).parent))  # main.py imports restore.py
 spec = importlib.util.spec_from_file_location('worker', Path(__file__).with_name('main.py'))
 worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
@@ -97,6 +99,43 @@ class WorkerSafety(unittest.TestCase):
             verify.assert_called_once()
             reset.assert_called_once()
             self.assertEqual(emit.call_args_list[-1].args[0], 'complete')
+
+
+class CardIDBackup(unittest.TestCase):
+    def image(self, cardid_bytes):
+        data = bytearray(b'\xff' * (worker_restore().CARDID_OFFSET + worker_restore().CARDID_SIZE + 16))
+        r = worker_restore()
+        data[r.CARDID_OFFSET:r.CARDID_OFFSET + r.CARDID_SIZE] = cardid_bytes
+        return bytes(data)
+
+    def run_backup(self, device_cardid, image):
+        events = []
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('esptool.cmds.read_flash', return_value=device_cardid), \
+             mock.patch.object(worker, 'emit', lambda kind, **f: events.append(dict(type=kind, **f))):
+            worker.backup_cardid(mock.MagicMock(), image, '4c:11:ae:00:00:01', d)
+            files = sorted(p.name for p in Path(d).rglob('*.bin'))
+        return events, files
+
+    def test_identity_saved_before_overwrite(self):
+        r = worker_restore()
+        keys = (b'ProductKey\0DeviceKey\0DeviceSecret\0').ljust(r.CARDID_SIZE, b'\xff')
+        events, files = self.run_backup(keys, self.image(b'\xff' * r.CARDID_SIZE))
+        self.assertEqual(len(files), 1)
+        self.assertIn(dict(type='cardid', status='keys', overwrite=True), events)
+
+    def test_short_image_or_blank_identity_is_skipped(self):
+        r = worker_restore()
+        events, files = self.run_backup(b'\xff' * r.CARDID_SIZE, self.image(b'\0' * r.CARDID_SIZE))
+        self.assertEqual(files, [])
+        with mock.patch('esptool.cmds.read_flash') as read:
+            worker.backup_cardid(mock.MagicMock(), b'\xe9' * 1024, 'aa', '/nonexistent')
+            read.assert_not_called()
+
+
+def worker_restore():
+    import restore
+    return restore
 
 
 if __name__ == '__main__':

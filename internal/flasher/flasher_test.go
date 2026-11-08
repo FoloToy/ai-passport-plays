@@ -13,8 +13,15 @@ import (
 )
 
 type fakeRunner struct {
-	called bool
-	err    error
+	called  bool
+	err     error
+	restore func(on func(worker.Event), cancel <-chan struct{}) error
+	req     worker.Request
+}
+
+func (f *fakeRunner) Restore(_ context.Context, req worker.Request, on func(worker.Event), cancel <-chan struct{}) error {
+	f.called, f.req = true, req
+	return f.restore(on, cancel)
 }
 
 func (f *fakeRunner) Flash(_ context.Context, req worker.Request, on func(worker.Event)) error {
@@ -85,5 +92,72 @@ func TestWorkerErrorCodeIsKept(t *testing.T) {
 	}
 	if err := m.Start(Job{}); err != nil {
 		t.Fatal("a finished job must not block the next one")
+	}
+}
+
+func TestRestoreReportsSessionAndCardID(t *testing.T) {
+	r := &fakeRunner{restore: func(on func(worker.Event), _ <-chan struct{}) error {
+		on(worker.Event{Type: "stage", Stage: "waiting"})
+		on(worker.Event{Type: "hint", Code: "replug"})
+		on(worker.Event{Type: "stage", Stage: "connecting"})
+		on(worker.Event{Type: "identified", Chip: "ESP32-C3", MAC: "aa:bb", Flash: "8MB"})
+		on(worker.Event{Type: "complete", MAC: "aa:bb", Session: "/backups/x", CardID: "keys"})
+		return nil
+	}}
+	m := New(r)
+	if err := m.StartRestore(RestoreJob{FirmwareDir: "/fw", BackupDir: "/backups", FullBackup: true}); err != nil {
+		t.Fatal(err)
+	}
+	s := wait(t, m)
+	if s.Kind != "restore" || s.Stage != "done" || s.Session != "/backups/x" || s.CardID != "keys" || s.Hint != "" {
+		t.Fatalf("unexpected state %+v", s)
+	}
+	if !r.req.FullBackup || r.req.FirmwareDir != "/fw" || r.req.BackupDir != "/backups" {
+		t.Fatalf("request not passed through: %+v", r.req)
+	}
+}
+
+func TestRestoreCancelOnlyBeforeWriting(t *testing.T) {
+	writing := make(chan struct{})
+	release := make(chan struct{})
+	r := &fakeRunner{restore: func(on func(worker.Event), cancel <-chan struct{}) error {
+		on(worker.Event{Type: "stage", Stage: "waiting"})
+		<-cancel
+		return &worker.CodedError{Code: "cancelled", Message: "stopped"}
+	}}
+	m := New(r)
+	if err := m.StartRestore(RestoreJob{}); err != nil {
+		t.Fatal(err)
+	}
+	for m.Snapshot().Stage != "waiting" {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !m.Cancel() {
+		t.Fatal("cancel while waiting should be accepted")
+	}
+	m.Cancel() // a second request must not panic on the closed channel
+	if s := wait(t, m); s.Stage != "cancelled" || s.ErrorCode != "" {
+		t.Fatalf("unexpected state %+v", s)
+	}
+
+	r.restore = func(on func(worker.Event), cancel <-chan struct{}) error {
+		on(worker.Event{Type: "stage", Stage: "writing"})
+		close(writing)
+		<-release
+		return nil
+	}
+	if err := m.StartRestore(RestoreJob{}); err != nil {
+		t.Fatal(err)
+	}
+	<-writing
+	if m.Cancel() {
+		t.Fatal("cancel must be refused once writing has started")
+	}
+	if err := m.Start(Job{}); err == nil {
+		t.Fatal("a second device job must be refused while a restore runs")
+	}
+	close(release)
+	if s := wait(t, m); s.Stage != "done" {
+		t.Fatalf("unexpected state %+v", s)
 	}
 }

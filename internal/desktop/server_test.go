@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/FoloToy/ai-passport-plays/internal/factory"
 	"github.com/FoloToy/ai-passport-plays/internal/flasher"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
 	"github.com/FoloToy/ai-passport-plays/internal/syncer"
@@ -111,5 +113,44 @@ func TestBodyReadWithoutContentLength(t *testing.T) {
 	s.ServeHTTP(w, r)
 	if w.Code != 200 || s.Settings.Get().LibraryDir != filepath.Clean(target) {
 		t.Fatalf("body ignored without Content-Length: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestRestoreUnpacksFirmwareAndRunsOneJob(t *testing.T) {
+	s, _ := newServer(t)
+	s.StateDir = t.TempDir()
+	backups := t.TempDir()
+	if w := do(s, "POST", "/api/backup/set", s.Token, `{"dir":"relative/path"}`); w.Code == 200 {
+		t.Fatal("relative backup folder accepted")
+	}
+	if w := do(s, "POST", "/api/backup/set", s.Token, `{"dir":"`+filepath.ToSlash(backups)+`"}`); w.Code != 200 {
+		t.Fatalf("set backup: %d %s", w.Code, w.Body)
+	}
+	if got := s.Settings.Get().Backups(); filepath.Clean(got) != filepath.Clean(backups) {
+		t.Fatalf("backup dir %q", got)
+	}
+	if w := do(s, "POST", "/api/restore/start", s.Token, `{"fullBackup":false}`); w.Code != 200 {
+		t.Fatalf("start: %d %s", w.Code, w.Body)
+	}
+	if _, err := os.Stat(filepath.Join(s.StateDir, "factory-firmware", factory.Version, "trae_card.bin")); err != nil {
+		t.Fatal("factory firmware was not unpacked:", err)
+	}
+	// The test server has no worker, so the job fails on its own; it must report a restore.
+	deadline := time.Now().Add(3 * time.Second)
+	for s.Flash.Active() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if st := s.Flash.Snapshot(); st.Kind != "restore" || st.Stage != "failed" {
+		t.Fatalf("unexpected state %+v", st)
+	}
+	if w := do(s, "POST", "/api/restore/cancel", s.Token, `{}`); w.Code == 200 {
+		t.Fatal("cancel accepted with nothing running")
+	}
+}
+
+func TestRestoreNeedsStateDir(t *testing.T) {
+	s, _ := newServer(t)
+	if w := do(s, "POST", "/api/restore/start", s.Token, `{}`); w.Code == 200 || !strings.Contains(w.Body.String(), "firmware") {
+		t.Fatalf("want firmware error, got %d %s", w.Code, w.Body)
 	}
 }

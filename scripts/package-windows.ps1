@@ -43,6 +43,7 @@ Invoke-Checked $python @('-m', 'pip', 'install', '-q', '-r', 'worker/requirement
 Invoke-Checked $python @('-m', 'unittest', 'discover', '-s', 'worker', '-p', 'test_*.py')
 Invoke-Checked $python @('-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--console', '--name', $workerName,
     '--distpath', '.runtime/worker-dist-windows', '--workpath', '.runtime/worker-build-windows', '--specpath', '.runtime',
+    '--paths', 'worker', '--hidden-import', 'restore',
     '--collect-all', 'esptool', '--collect-all', 'esp_pylib', 'worker/main.py')
 Copy-Item ".runtime/worker-dist-windows/$workerName" (Join-Path $package 'worker') -Recurse
 
@@ -51,7 +52,7 @@ Invoke-Checked 'go' @('build', '-tags', 'production', '-trimpath', '-ldflags', "
 
 $thirdParty = Join-Path $package 'ThirdParty'
 New-Item -ItemType Directory -Force $thirdParty | Out-Null
-Copy-Item 'worker/main.py', 'worker/requirements.txt', 'worker/requirements.lock', 'worker/requirements-windows.lock', 'THIRD_PARTY.md' $thirdParty
+Copy-Item 'worker/main.py', 'worker/restore.py', 'worker/requirements.txt', 'worker/requirements.lock', 'worker/requirements-windows.lock', 'THIRD_PARTY.md' $thirdParty
 Invoke-Checked $python @('scripts/collect-licenses.py', (Join-Path $thirdParty 'licenses'))
 if (!(Test-Path '.runtime/sources/esptool-5.6.0.tar.gz')) {
     Invoke-Checked $python @('-m', 'pip', 'download', '-q', '--no-deps', '--no-binary=:all:', 'esptool==5.6.0', '-d', '.runtime/sources')

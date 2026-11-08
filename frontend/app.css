@@ -342,3 +342,22 @@ details.log pre { max-height: 180px; overflow: auto; background: #0a0a0b; border
 .m-sub { margin: 0; color: var(--muted); }
 .m-note { color: var(--muted); font-size: 12.5px; }
 .inline-note { align-self: center; color: var(--muted); font-size: 13px; }
+
+/* ---------- factory restore ---------- */
+.restore .lead { margin: -10px 0 20px; color: var(--muted); max-width: 680px; line-height: 1.6; }
+.restore-steps { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.restore-steps li { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.restore-steps b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--green-bg); color: var(--green); font-size: 13px; }
+.restore-status { padding: 14px 0 4px; }
+.restore-status h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; font-size: 19px; }
+.restore .buttons.center { justify-content: center; }
+.btn.wide { width: 100%; justify-content: center; }
+.big-progress.indeterminate i { width: 35%; animation: slide 1.3s ease-in-out infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.check input { accent-color: var(--green); width: 16px; height: 16px; }
+.kv dd.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.center-note { text-align: center; color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+.center-note a { color: var(--green); text-decoration: none; }
+.center-note a:hover { text-decoration: underline; }
+button.link { background: none; border: 0; padding: 0; color: var(--green); font: inherit; cursor: pointer; text-decoration: underline; }

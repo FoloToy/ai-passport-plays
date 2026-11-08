@@ -1,4 +1,5 @@
-// Package flasher runs one flash job at a time and exposes its progress.
+// Package flasher runs one device job at a time (installing a play or a factory restore)
+// and exposes its progress.
 package flasher
 
 import (
@@ -12,19 +13,30 @@ import (
 )
 
 type State struct {
-	Active    bool      `json:"active"`
-	Slug      string    `json:"slug,omitempty"`
-	Port      string    `json:"port,omitempty"`
-	Stage     string    `json:"stage"` // idle, checking, connecting, writing, verifying, resetting, done, failed
-	Percent   int       `json:"percent"`
-	Chip      string    `json:"chip,omitempty"`
-	MAC       string    `json:"mac,omitempty"`
-	Flash     string    `json:"flash,omitempty"`
-	ErrorCode string    `json:"errorCode,omitempty"`
-	Error     string    `json:"error,omitempty"`
-	Logs      []string  `json:"logs"`
-	StartedAt time.Time `json:"startedAt"`
-	EndedAt   time.Time `json:"endedAt"`
+	Active bool `json:"active"`
+	// Kind is "flash" (install a play) or "restore" (factory restore).
+	Kind string `json:"kind,omitempty"`
+	Slug string `json:"slug,omitempty"`
+	Port string `json:"port,omitempty"`
+	// Flash: idle, checking, connecting, writing, verifying, resetting, done, failed.
+	// Restore adds: preparing, waiting, backup, cardid, cancelled.
+	Stage     string   `json:"stage"`
+	Percent   int      `json:"percent"`
+	Chip      string   `json:"chip,omitempty"`
+	MAC       string   `json:"mac,omitempty"`
+	Flash     string   `json:"flash,omitempty"`
+	ErrorCode string   `json:"errorCode,omitempty"`
+	Error     string   `json:"error,omitempty"`
+	Logs      []string `json:"logs"`
+	// Restore details.
+	Hint       string `json:"hint,omitempty"`    // multiple, code43, replug
+	Session    string `json:"session,omitempty"` // backup folder of this restore
+	CardID     string `json:"cardid,omitempty"`  // keys, blank_ff, blank_00, unknown
+	Cancelling bool   `json:"cancelling,omitempty"`
+	// CardIDOverwritten is set when a play image replaced a non-blank identity area.
+	CardIDOverwritten bool      `json:"cardidOverwritten,omitempty"`
+	StartedAt         time.Time `json:"startedAt"`
+	EndedAt           time.Time `json:"endedAt"`
 }
 
 type Job struct {
@@ -34,17 +46,29 @@ type Job struct {
 	SHA256 string
 	Size   int64
 	Baud   int
+	// BackupDir keeps a copy of the device identity area if the image overwrites it.
+	BackupDir string
+}
+
+// RestoreJob is a factory restore. The worker finds the device by itself.
+type RestoreJob struct {
+	FirmwareDir string
+	BackupDir   string
+	FullBackup  bool
 }
 
 type Runner interface {
 	Flash(ctx context.Context, req worker.Request, on func(worker.Event)) error
+	Restore(ctx context.Context, req worker.Request, on func(worker.Event), cancel <-chan struct{}) error
 }
 
 type Manager struct {
-	runner Runner
-	mu     sync.Mutex
-	state  State
-	cancel context.CancelFunc
+	runner   Runner
+	mu       sync.Mutex
+	state    State
+	cancel   context.CancelFunc
+	stop     chan struct{} // closed to ask a restore to stop safely
+	stopOnce sync.Once
 }
 
 func New(r Runner) *Manager {
@@ -82,10 +106,56 @@ func (m *Manager) Start(job Job) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	m.cancel = cancel
-	m.state = State{Active: true, Slug: job.Slug, Port: job.Port, Stage: "checking", Logs: []string{}, StartedAt: time.Now()}
+	m.state = State{Active: true, Kind: "flash", Slug: job.Slug, Port: job.Port, Stage: "checking", Logs: []string{}, StartedAt: time.Now()}
 	m.mu.Unlock()
 	go m.run(ctx, job)
 	return nil
+}
+
+// StartRestore begins a factory restore.
+func (m *Manager) StartRestore(job RestoreJob) error {
+	m.mu.Lock()
+	if m.state.Active {
+		m.mu.Unlock()
+		return errors.New("busy")
+	}
+	// Up to 150 s waiting for the device, a full 8 MB backup, writing and verifying.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	m.cancel = cancel
+	m.stop, m.stopOnce = make(chan struct{}), sync.Once{}
+	m.state = State{Active: true, Kind: "restore", Stage: "preparing", Logs: []string{}, StartedAt: time.Now()}
+	stop := m.stop
+	m.mu.Unlock()
+	go func() {
+		defer cancel()
+		err := m.runner.Restore(ctx, worker.Request{FirmwareDir: job.FirmwareDir, BackupDir: job.BackupDir, FullBackup: job.FullBackup}, m.event, stop)
+		var ce *worker.CodedError
+		if errors.As(err, &ce) && ce.Code == "cancelled" {
+			m.mu.Lock()
+			m.state.Active, m.state.Stage, m.state.Cancelling, m.state.EndedAt = false, "cancelled", false, time.Now()
+			m.mu.Unlock()
+			return
+		}
+		m.finish(err)
+	}()
+	return nil
+}
+
+// Cancel asks a running restore to stop. The worker ignores it once writing has begun,
+// so the device is never left half-written. Installing a play cannot be cancelled.
+func (m *Manager) Cancel() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.state.Active || m.state.Kind != "restore" {
+		return false
+	}
+	switch m.state.Stage {
+	case "writing", "verifying", "cardid", "resetting":
+		return false
+	}
+	m.state.Cancelling = true
+	m.stopOnce.Do(func() { close(m.stop) })
+	return true
 }
 
 func (m *Manager) run(ctx context.Context, job Job) {
@@ -100,7 +170,11 @@ func (m *Manager) run(ctx context.Context, job Job) {
 		m.fail(code, err)
 		return
 	}
-	err := m.runner.Flash(ctx, worker.Request{Port: job.Port, Image: job.Image, SHA256: job.SHA256, Size: job.Size, Baud: job.Baud}, m.event)
+	err := m.runner.Flash(ctx, worker.Request{Port: job.Port, Image: job.Image, SHA256: job.SHA256, Size: job.Size, Baud: job.Baud, BackupDir: job.BackupDir}, m.event)
+	m.finish(err)
+}
+
+func (m *Manager) finish(err error) {
 	if err != nil {
 		code := "other"
 		var ce *worker.CodedError
@@ -127,11 +201,30 @@ func (m *Manager) event(ev worker.Event) {
 	switch ev.Type {
 	case "stage":
 		m.state.Stage = ev.Stage
-		if ev.Stage == "writing" || ev.Stage == "verifying" {
+		if ev.Stage == "writing" || ev.Stage == "verifying" || ev.Stage == "backup" {
 			m.state.Percent = 0
+		}
+		if ev.Stage == "connecting" {
+			m.state.Hint = ""
 		}
 	case "identified":
 		m.state.Chip, m.state.MAC, m.state.Flash = ev.Chip, ev.MAC, ev.Flash
+		m.state.Hint = ""
+	case "hint":
+		m.state.Hint = ev.Code
+		if ev.Port != "" {
+			m.state.Port = ev.Port
+		}
+	case "cardid":
+		m.state.CardID = ev.Status
+		m.state.CardIDOverwritten = ev.Overwrite && ev.Status == "keys"
+	case "complete":
+		if ev.Session != "" {
+			m.state.Session = ev.Session
+		}
+		if ev.CardID != "" {
+			m.state.CardID = ev.CardID
+		}
 	case "progress":
 		m.state.Percent = ev.Percent
 	case "log":

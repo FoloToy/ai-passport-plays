@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,11 +30,16 @@ type Port struct {
 
 type Request struct {
 	Command string `json:"command"`
-	Port    string `json:"port"`
-	Image   string `json:"image"`
-	SHA256  string `json:"sha256"`
-	Size    int64  `json:"size"`
-	Baud    int    `json:"baud"`
+	Port    string `json:"port,omitempty"`
+	Image   string `json:"image,omitempty"`
+	SHA256  string `json:"sha256,omitempty"`
+	Size    int64  `json:"size,omitempty"`
+	Baud    int    `json:"baud,omitempty"`
+	// BackupDir receives cardid copies (flash) or the restore backup sessions (restore).
+	BackupDir string `json:"backupDir,omitempty"`
+	// Factory restore only.
+	FirmwareDir string `json:"firmwareDir,omitempty"`
+	FullBackup  bool   `json:"fullBackup,omitempty"`
 }
 
 type Event struct {
@@ -45,6 +51,12 @@ type Event struct {
 	Chip    string `json:"chip,omitempty"`
 	MAC     string `json:"mac,omitempty"`
 	Flash   string `json:"flash,omitempty"`
+	// Factory restore and cardid events.
+	Port      string `json:"port,omitempty"`
+	Session   string `json:"session,omitempty"`
+	CardID    string `json:"cardid,omitempty"`
+	Status    string `json:"status,omitempty"`
+	Overwrite bool   `json:"overwrite,omitempty"`
 }
 
 // CodedError keeps the worker's error code for translation in the UI.
@@ -110,10 +122,21 @@ func (r Runner) Ports(ctx context.Context) ([]Port, error) {
 
 // Flash streams worker events to on until the worker exits.
 func (r Runner) Flash(ctx context.Context, req Request, on func(Event)) error {
+	req.Command = "flash"
+	return r.stream(ctx, req, on, nil)
+}
+
+// Restore runs a factory restore. Closing cancel asks the worker to stop; it only stops
+// before writing starts, so a restore is never left half-written.
+func (r Runner) Restore(ctx context.Context, req Request, on func(Event), cancel <-chan struct{}) error {
+	req.Command = "restore"
+	return r.stream(ctx, req, on, cancel)
+}
+
+func (r Runner) stream(ctx context.Context, req Request, on func(Event), cancel <-chan struct{}) error {
 	if !r.Available() {
 		return errors.New("flashing worker unavailable")
 	}
-	req.Command = "flash"
 	cmd := r.command(ctx)
 	in, err := cmd.StdinPipe()
 	if err != nil {
@@ -133,7 +156,21 @@ func (r Runner) Flash(ctx context.Context, req Request, on func(Event)) error {
 		_ = cmd.Wait()
 		return err
 	}
-	_ = in.Close()
+	finished := make(chan struct{})
+	defer close(finished)
+	if cancel == nil {
+		_ = in.Close()
+	} else {
+		go func() {
+			defer in.Close()
+			select {
+			case <-cancel:
+				_, _ = io.WriteString(in, `{"command":"cancel"}`+"\n")
+				<-finished
+			case <-finished:
+			}
+		}()
+	}
 	scan := bufio.NewScanner(out)
 	scan.Buffer(make([]byte, 4096), 1<<20)
 	var workerErr *CodedError

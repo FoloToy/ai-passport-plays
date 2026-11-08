@@ -15,6 +15,29 @@ type Settings struct {
 	LibraryDir string `json:"libraryDir"`
 	// Language is "auto", "zh" or "en".
 	Language string `json:"language"`
+	// BackupDir keeps factory-restore backups and identity-area copies. Empty means DefaultBackupDir.
+	BackupDir string `json:"backupDir,omitempty"`
+}
+
+// DefaultBackupDir matches the standalone factory restore tool, so earlier backups stay together.
+func DefaultBackupDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	root := filepath.Join(home, "Documents")
+	if st, err := os.Stat(root); err != nil || !st.IsDir() {
+		root = home
+	}
+	return filepath.Join(root, "FoloToy恢复出厂备份")
+}
+
+// Backups returns the folder to use for device backups.
+func (c Settings) Backups() string {
+	if c.BackupDir != "" {
+		return c.BackupDir
+	}
+	return DefaultBackupDir()
 }
 
 type Store struct {

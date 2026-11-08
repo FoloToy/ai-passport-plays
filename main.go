@@ -25,7 +25,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-var version = "0.1.0-dev"
+var version = "0.2.0-dev"
 
 const appTitle = "AI Passport 玩法社区"
 
@@ -71,6 +71,7 @@ func main() {
 	flash := flasher.New(runner)
 	server := desktop.New(version, store, sync, flash, runner)
 	server.Reveal = reveal
+	server.StateDir = dir
 	server.CheckUpdatesInBackground()
 
 	if *headless {
@@ -91,8 +92,8 @@ func main() {
 		Title: appTitle, Width: 1280, Height: 860, MinWidth: 980, MinHeight: 680, URL: "/",
 		BackgroundColour: application.NewRGB(12, 12, 13),
 	})
-	server.ChooseDir = func(current string) (string, error) {
-		d := app.Dialog.OpenFile().SetTitle("选择玩法存储目录 / Choose library folder").
+	server.ChooseDir = func(title, current string) (string, error) {
+		d := app.Dialog.OpenFile().SetTitle(title).
 			CanChooseFiles(false).CanChooseDirectories(true).CanCreateDirectories(true).AttachToWindow(window)
 		if current != "" {
 			d = d.SetDirectory(filepath.Dir(current))
@@ -103,7 +104,7 @@ func main() {
 	window.OnWindowEvent(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		if flash.Active() {
 			e.Cancel()
-			app.Dialog.Info().SetTitle("正在刷机 / Flashing").SetMessage("请等待刷机完成后再关闭窗口，否则设备可能无法启动。\nWait for flashing to finish before closing.").Show()
+			app.Dialog.Info().SetTitle("正在操作设备 / Device busy").SetMessage("请等待刷机或恢复出厂完成后再关闭窗口，否则设备可能无法启动。\nWait for flashing or the factory restore to finish before closing.").Show()
 		}
 	})
 	app.Menu.Set(application.DefaultApplicationMenu())

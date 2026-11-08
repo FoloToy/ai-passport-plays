@@ -69,6 +69,35 @@ const I18N = {
     err_checksum: '固件校验失败，请重新更新玩法库。', err_image: '固件文件无效。', err_image_chip: '该固件不是为 AI Passport (ESP32-C3) 构建的。',
     err_worker: '刷机组件不可用。', err_other: '发生错误。', err_no_picker: '请直接输入文件夹路径。',
     err_rate_limited: '固件服务器繁忙，请稍后重试。', err_no_firmware: '这个玩法没有可下载的固件。', err_not_ready: '固件还没有下载。',
+    // factory restore
+    nav_restore: '恢复出厂', restore_title: '恢复出厂',
+    restore_lead: '把 AI Passport 恢复成出厂固件。适用于刷入玩法后无法启动、反复重启，或连接电脑后很快断开的情况。',
+    restore_step1: '只连接一台需要恢复的 AI Passport', restore_step2: '点击“一键恢复出厂”；等待连接时，按提示拔插一次 USB',
+    restore_start: '一键恢复出厂', restore_confirm: '请确认电脑只连接了一台 AI Passport。开始后请勿拔线，也不要关闭本程序。',
+    restore_go: '开始恢复', r_warn: '恢复过程中请勿拔出设备或关闭本程序。', restore_stop: '停止', restore_stopping: '正在安全停止…', restore_again: '再次恢复',
+    r_idle: '准备就绪', r_idle_sub: '无需选择串口，程序会自动找到设备。',
+    r_preparing: '正在准备恢复', r_preparing_sub: '正在进行安全检查',
+    r_waiting: '正在等待设备', r_replug: '如果设备没有出现，请拔插一次 USB。', r_multiple: '检测到多台设备，请只保留需要恢复的那一台。',
+    r_code43: p => `Windows 报告设备 USB 异常（${p}），请拔插一次设备。`,
+    r_connecting: '设备已连接', r_connecting_sub: '正在检查设备',
+    r_backup: '正在备份', r_backup_sub: '请保持设备连接',
+    r_writing: '正在写入出厂固件', r_writing_sub: '请勿拔线或关闭本程序',
+    r_verifying: '正在校验恢复结果', r_verifying_sub: '马上就好，请勿拔线',
+    r_resetting: '正在重启设备', r_resetting_sub: '马上就好',
+    r_done: '恢复出厂成功', r_done_sub: '设备会自动重启。如果没有反应，拔插一次 USB 即可。',
+    r_failed: '没有恢复成功', r_failed_sub: '拔插设备后可以再试一次。',
+    r_cancelled: '已停止', r_cancelled_sub: '没有写入任何内容。',
+    r_busy_flash: '正在刷入玩法，完成后才能恢复出厂。',
+    r_blank_id: '设备的身份区（序列号和密钥）是空的。出厂固件已写入，但设备可能无法联网认证，请联系 FoloToy 并提供 MAC 地址。',
+    r_unknown_id: '没有在设备的身份区找到完整的序列号和密钥。如果设备无法联网认证，请联系 FoloToy 并提供 MAC 地址。',
+    open_backup: '打开备份文件夹', r_options: '选项', r_backup_dir: '备份位置', r_full: '同时备份整片 Flash（推荐，约 8 MB，多花 1–2 分钟）',
+    r_safety: '恢复时不会擦除整片 Flash，也不会改写设备的身份区（序列号和密钥）。写入前会先备份，写入后会逐段校验。',
+    r_fw: '出厂固件', restore_link: '设备无法启动？试试恢复出厂',
+    cardid_overwritten: '这个玩法覆盖了设备的身份区（序列号和密钥）。改动前的内容已备份到备份文件夹，需要时可联系 FoloToy 恢复。',
+    err_not_found: '150 秒内没有找到设备。请关闭其他串口工具，按住 BOOT 键再插入 USB 后重试。',
+    err_firmware: '内置的出厂固件校验失败，请重新安装本程序。', err_backup: '读取设备备份失败，请拔插设备后重试。',
+    err_write: '写入或校验出厂固件失败。请不要拔线，直接再恢复一次。', err_cardid_changed: '严重错误：设备身份区在恢复过程中发生了变化。请停止使用这台设备，并联系 FoloToy。',
+    err_backup_dir: '无法写入备份目录。', err_not_cancellable: '已开始写入，为避免设备损坏，会等写入和校验完成。', err_cancelled: '已停止。',
   },
   en: {
     nav_library: 'App Library', nav_settings: 'Settings',
@@ -127,6 +156,35 @@ const I18N = {
     err_checksum: 'Firmware check failed. Update the library again.', err_image: 'Invalid firmware file.', err_image_chip: 'This firmware is not built for AI Passport (ESP32-C3).',
     err_worker: 'The flashing component is unavailable.', err_other: 'Something went wrong.', err_no_picker: 'Type the folder path instead.',
     err_rate_limited: 'The firmware server is busy. Try again later.', err_no_firmware: 'This app has no downloadable firmware.', err_not_ready: 'Firmware not downloaded yet.',
+    // factory restore
+    nav_restore: 'Factory restore', restore_title: 'Factory restore',
+    restore_lead: 'Put the factory firmware back on an AI Passport. Use it when the device will not start after installing an app, keeps rebooting, or disconnects soon after you plug it in.',
+    restore_step1: 'Connect only the AI Passport you want to restore', restore_step2: 'Click “Restore factory firmware”; while it waits, unplug and replug USB once if asked',
+    restore_start: 'Restore factory firmware', restore_confirm: 'Make sure only one AI Passport is connected. Do not unplug it or close the app once it starts.',
+    restore_go: 'Start', r_warn: 'Do not unplug the device or quit the app during the restore.', restore_stop: 'Stop', restore_stopping: 'Stopping safely…', restore_again: 'Restore again',
+    r_idle: 'Ready', r_idle_sub: 'No port to choose; the app finds the device by itself.',
+    r_preparing: 'Preparing', r_preparing_sub: 'Running safety checks',
+    r_waiting: 'Waiting for the device', r_replug: 'If nothing happens, unplug and replug USB once.', r_multiple: 'More than one device is connected. Keep only the one to restore.',
+    r_code43: p => `Windows reports a USB error on ${p}. Unplug and replug the device once.`,
+    r_connecting: 'Device connected', r_connecting_sub: 'Checking the device',
+    r_backup: 'Backing up', r_backup_sub: 'Keep the device connected',
+    r_writing: 'Writing factory firmware', r_writing_sub: 'Do not unplug or close the app',
+    r_verifying: 'Verifying', r_verifying_sub: 'Almost done; do not unplug',
+    r_resetting: 'Restarting the device', r_resetting_sub: 'Almost done',
+    r_done: 'Factory firmware restored', r_done_sub: 'The device restarts by itself. If it does not, unplug and replug USB.',
+    r_failed: 'The restore did not finish', r_failed_sub: 'Replug the device and try again.',
+    r_cancelled: 'Stopped', r_cancelled_sub: 'Nothing was written.',
+    r_busy_flash: 'An app is being installed. Wait for it to finish first.',
+    r_blank_id: 'The device identity area (serial number and keys) is empty. The factory firmware is installed, but the device may fail to sign in online. Contact FoloToy with the MAC address.',
+    r_unknown_id: 'No complete serial number and keys were found in the identity area. If the device cannot sign in online, contact FoloToy with the MAC address.',
+    open_backup: 'Open backup folder', r_options: 'Options', r_backup_dir: 'Backup folder', r_full: 'Also back up the whole flash (recommended; about 8 MB, 1–2 extra minutes)',
+    r_safety: 'The restore never erases the whole flash and never rewrites the identity area (serial number and keys). It backs up first and verifies every segment afterwards.',
+    r_fw: 'Factory firmware', restore_link: 'Device will not start? Try a factory restore',
+    cardid_overwritten: 'This app overwrote the device identity area (serial number and keys). The previous contents are in the backup folder; contact FoloToy if you need them restored.',
+    err_not_found: 'No device was found within 150 seconds. Close other serial tools, then hold BOOT while plugging in USB and try again.',
+    err_firmware: 'The bundled factory firmware failed its check. Reinstall the app.', err_backup: 'Reading the backup from the device failed. Replug it and try again.',
+    err_write: 'Writing or verifying the factory firmware failed. Keep it plugged in and restore again.', err_cardid_changed: 'Serious error: the identity area changed during the restore. Stop using this device and contact FoloToy.',
+    err_backup_dir: 'Cannot write to the backup folder.', err_not_cancellable: 'Writing has started. To protect the device it will finish writing and verifying first.', err_cancelled: 'Stopped.',
   },
 };
 
@@ -211,6 +269,7 @@ const showError = e => toast(errText(e.code, e.message), true);
 
 /* ---------------- state ---------------- */
 const S = {
+  restore: { full: true, confirm: false, logOpen: false },
   server: null,
   catalog: null,
   catalogKey: '',
@@ -257,6 +316,7 @@ function parseRoute() {
   const params = new URLSearchParams(query || '');
   if (path.startsWith('/play/')) return { name: 'library', play: decodeURIComponent(path.slice(6)), params };
   if (path === '/settings') return { name: 'settings', params };
+  if (path === '/restore') return { name: 'restore', params };
   return { name: 'library', params };
 }
 
@@ -288,6 +348,7 @@ function renderTop() {
   const r = parseRoute();
   $('#topnav').innerHTML = `
     <a href="${libraryHash()}" class="${r.name === 'library' ? 'active' : ''}">${t('nav_library')}</a>
+    <a href="#/restore" class="${r.name === 'restore' ? 'active' : ''}">${t('nav_restore')}</a>
     <a href="#/settings" class="${r.name === 'settings' ? 'active' : ''}">${t('nav_settings')}</a>`;
   renderTopRight();
 }
@@ -325,6 +386,8 @@ function render() {
   const app = $('#app');
   if (r.name === 'settings') {
     app.innerHTML = renderSettings();
+  } else if (r.name === 'restore') {
+    app.innerHTML = renderRestore();
   } else if (!lib.hasIndex || !S.catalog) {
     app.innerHTML = S.server.sync.running ? `<div class="center-page"><div class="welcome sync-card" id="sync-inline">${syncBody()}</div></div>` : renderWelcome();
   } else {
@@ -674,12 +737,13 @@ function flashBody() {
   const info = f.chip ? `<dl class="kv"><dt>${t('chip')}</dt><dd>${esc(f.chip)}</dd><dt>${t('mac')}</dt><dd>${esc(f.mac)}</dd><dt>${t('flash_size')}</dt><dd>${esc(f.flash)}</dd></dl>` : '';
   if (f.stage === 'done') {
     return `<div class="steps"><span class="on"></span><span class="on"></span><span class="on"></span></div>
-      <div class="result"><div class="icon">✓</div><h3>${t('flash_done')}</h3><p>${title} · ${t('flash_done_sub')}</p></div>${info}${logs}
+      <div class="result"><div class="icon">✓</div><h3>${t('flash_done')}</h3><p>${title} · ${t('flash_done_sub')}</p></div>${info}${cardidNote(f)}${logs}
       <div class="modal-foot inline"><button class="btn primary" data-action="close-modal">${t('done')}</button></div>`;
   }
   if (f.stage === 'failed') {
     return `<div class="steps"><span class="on"></span><span class="on"></span><span></span></div>
-      <div class="result fail"><div class="icon">!</div><h3>${t('flash_failed')}</h3><p>${esc(errText(f.errorCode, f.error))}</p></div>${info}${logs}
+      <div class="result fail"><div class="icon">!</div><h3>${t('flash_failed')}</h3><p>${esc(errText(f.errorCode, f.error))}</p></div>${info}${cardidNote(f)}${logs}
+      <p class="center-note"><a href="#/restore" data-action="go-restore">${t('restore_link')}</a></p>
       <div class="modal-foot inline"><button class="btn" data-action="close-modal">${t('close')}</button><button class="btn primary" data-action="flash-retry">${t('retry')}</button></div>`;
   }
   const pct = f.stage === 'writing' || f.stage === 'verifying' ? f.percent : f.stage === 'resetting' ? 100 : 0;
@@ -689,6 +753,110 @@ function flashBody() {
     <div class="big-progress"><i data-w="${pct}"></i></div>
     <div class="progress-meta"><span>${esc(f.port || '')}</span><span>${pct}%</span></div>
     ${info}<div class="sp12"></div><div class="notice">${t('flash_warn')}</div>${logs}`;
+}
+
+function cardidNote(f) {
+  if (!f.cardidOverwritten) return '';
+  return `<div class="sp12"></div><div class="notice">${t('cardid_overwritten')} <button class="link" data-action="reveal-backup">${t('open_backup')}</button></div>`;
+}
+
+/* ---------------- factory restore ---------------- */
+const RESTORE_STAGES = ['preparing', 'waiting', 'connecting', 'checking', 'backup', 'writing', 'verifying', 'cardid', 'resetting'];
+
+function restoreState() {
+  const f = S.server.flash;
+  return f && f.kind === 'restore' ? f : { stage: 'idle', logs: [] };
+}
+
+function renderRestore() {
+  const st = S.server;
+  const r = st.restore || {};
+  const busy = st.flash.active;
+  return `<div class="settings restore">
+    <h1>${t('restore_title')}</h1>
+    <p class="lead">${t('restore_lead')}</p>
+    <section class="panel" id="restore-main">${restoreMain()}</section>
+    <section class="panel">
+      <h2>${t('r_options')}</h2><p>${t('r_safety')}</p>
+      <dl class="kv"><dt>${t('r_backup_dir')}</dt><dd class="ellipsis" title="${esc(r.backupDir || '')}">${esc(r.backupDir || '—')}</dd><dt>${t('r_fw')}</dt><dd>${esc(r.firmware || '')}</dd></dl>
+      ${st.native ? '' : `<div class="folder mt10">${ICON.folder}<input id="backup-input" value="${esc(r.backupDir || '')}" spellcheck="false"></div>`}
+      <label class="check mt10"><input type="checkbox" id="restore-full" ${S.restore.full ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${t('r_full')}</label>
+      <div class="buttons">
+        <button class="btn" data-action="choose-backup" ${busy ? 'disabled' : ''}>${t('change_dir')}</button>
+        ${st.native ? `<button class="btn ghost" data-action="reveal-backup">${t('open_backup')}</button>` : ''}
+      </div>
+    </section>
+  </div>`;
+}
+
+function restoreMain() {
+  const st = S.server;
+  const f = restoreState();
+  const logs = f.logs && f.logs.length ? `<details class="log"${S.restore.logOpen ? ' open' : ''}><summary>${t('log')}</summary><pre>${esc(f.logs.join('\n'))}</pre></details>` : '';
+  const info = f.mac ? `<dl class="kv"><dt>${t('chip')}</dt><dd>${esc(f.chip)}</dd><dt>${t('mac')}</dt><dd>${esc(f.mac)}</dd><dt>${t('flash_size')}</dt><dd>${esc(f.flash)}</dd></dl>` : '';
+  const steps = `<ol class="restore-steps"><li><b>1</b>${t('restore_step1')}</li><li><b>2</b>${t('restore_step2')}</li></ol>`;
+  if (st.flash.active && st.flash.kind !== 'restore') {
+    return `${steps}<div class="notice">${t('r_busy_flash')}</div>`;
+  }
+  if (f.stage === 'idle' || f.stage === 'cancelled') {
+    const head = f.stage === 'cancelled' ? `<h3>${t('r_cancelled')}</h3><p class="m-sub">${t('r_cancelled_sub')}</p>` : `<h3>${t('r_idle')}</h3><p class="m-sub">${t('r_idle_sub')}</p>`;
+    const action = S.restore.confirm
+      ? `<div class="notice">${t('restore_confirm')}</div><div class="buttons"><button class="btn ghost" data-action="restore-unconfirm">${t('cancel')}</button><button class="btn primary large" data-action="restore-go" ${st.worker ? '' : 'disabled'}>${t('restore_go')}</button></div>`
+      : `<div class="buttons"><button class="btn primary large wide" data-action="restore-confirm" ${st.worker ? '' : 'disabled'}>${t('restore_start')}</button></div>`;
+    return `${steps}<div class="restore-status">${head}</div>${st.worker ? '' : `<div class="notice red">${t('err_worker')}</div>`}${action}${logs}`;
+  }
+  if (f.stage === 'done') {
+    let id = '';
+    if (f.cardid === 'blank_ff' || f.cardid === 'blank_00') id = `<div class="notice">${t('r_blank_id')}</div>`;
+    else if (f.cardid && f.cardid !== 'keys') id = `<div class="notice">${t('r_unknown_id')}</div>`;
+    return `<div class="result"><div class="icon">✓</div><h3>${t('r_done')}</h3><p>${t('r_done_sub')}</p></div>${info}<div class="sp12"></div>${id}
+      <div class="buttons"><button class="btn" data-action="reveal-session">${t('open_backup')}</button><button class="btn ghost" data-action="restore-reset">${t('restore_again')}</button></div>${logs}`;
+  }
+  if (f.stage === 'failed') {
+    const serious = f.errorCode === 'cardid_changed';
+    return `<div class="result fail"><div class="icon">!</div><h3>${t('r_failed')}</h3><p>${esc(errText(f.errorCode, f.error))}</p></div>${info}
+      ${serious ? '' : `<p class="center-note">${t('r_failed_sub')}</p>`}
+      <div class="buttons center">${f.session || serious ? `<button class="btn" data-action="reveal-backup">${t('open_backup')}</button>` : ''}${serious ? '' : `<button class="btn primary" data-action="restore-retry">${t('retry')}</button>`}</div>${logs}`;
+  }
+  // running
+  let key = f.stage === 'checking' ? 'connecting' : f.stage === 'cardid' ? 'verifying' : f.stage;
+  if (!I18N.zh['r_' + key]) key = 'preparing';
+  let sub = t('r_' + key + '_sub');
+  if (f.stage === 'waiting') sub = f.hint === 'multiple' ? t('r_multiple') : f.hint === 'code43' ? t('r_code43', f.port || 'COM') : t('r_replug');
+  const idx = Math.max(0, RESTORE_STAGES.indexOf(f.stage));
+  const measured = ['backup', 'writing', 'verifying'].includes(f.stage);
+  const bar = f.stage === 'waiting'
+    ? `<div class="big-progress indeterminate"><i></i></div>`
+    : `<div class="big-progress"><i data-w="${measured ? f.percent : Math.round((idx / RESTORE_STAGES.length) * 100)}"></i></div>`;
+  const writing = ['writing', 'verifying', 'cardid', 'resetting'].includes(f.stage);
+  const stop = writing ? '' : `<button class="btn ghost" data-action="restore-cancel" ${f.cancelling ? 'disabled' : ''}>${f.cancelling ? t('restore_stopping') : t('restore_stop')}</button>`;
+  return `${steps}<div class="restore-status"><h3><span class="spinner"></span>${t('r_' + key)}</h3><p class="m-sub">${esc(sub)}</p></div>
+    ${bar}<div class="progress-meta"><span>${esc(f.port || '')}</span><span>${measured ? f.percent + '%' : ''}</span></div>
+    ${info}<div class="sp12"></div><div class="notice">${t('r_warn')}</div><div class="buttons">${stop}</div>${logs}`;
+}
+
+function updateRestore() {
+  const el = $('#restore-main');
+  if (!el) return;
+  const pre = el.querySelector('details.log pre');
+  const atBottom = pre ? pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8 : true;
+  const top = pre ? pre.scrollTop : 0;
+  el.innerHTML = restoreMain();
+  applyWidths(el);
+  const np = el.querySelector('details.log pre');
+  if (np) np.scrollTop = atBottom ? np.scrollHeight : top;
+  const full = $('#restore-full');
+  if (full) full.disabled = S.server.flash.active;
+}
+
+async function startRestore() {
+  try {
+    const full = $('#restore-full');
+    if (full) S.restore.full = full.checked;
+    S.restore.confirm = false;
+    await api('restore/start', { fullBackup: S.restore.full });
+    await poll(true);
+  } catch (e) { showError(e); }
 }
 
 async function scanPorts() {
@@ -921,6 +1089,7 @@ const actions = {
     S.checking = false; await poll(); render();
   },
   'flash': el => {
+    if (S.server.flash.active && S.server.flash.kind === 'restore') { toast(t('err_busy'), true); return; }
     S.flash.slug = el.dataset.slug;
     S.flash.port = '';
     S.modal = 'flash';
@@ -939,6 +1108,23 @@ const actions = {
       await api('flash/start', { slug: S.flash.slug, port: S.flash.port });
       await poll();
       renderModal();
+    } catch (e) { showError(e); }
+  },
+  'go-restore': (el, ev) => { ev.preventDefault(); if (S.server.flash.active) return; closeModal(); location.hash = '#/restore'; },
+  'restore-confirm': () => { S.restore.confirm = true; updateRestore(); },
+  'restore-unconfirm': () => { S.restore.confirm = false; updateRestore(); },
+  'restore-go': () => startRestore(),
+  'restore-retry': async () => { await api('flash/reset', {}).catch(() => {}); await startRestore(); },
+  'restore-reset': async () => { await api('flash/reset', {}).catch(() => {}); await poll(true); },
+  'restore-cancel': async () => { try { await api('restore/cancel', {}); } catch (e) { showError(e); } poll(); },
+  'reveal-backup': () => api('reveal', { target: 'backup' }).catch(showError),
+  'reveal-session': () => api('reveal', { target: 'restore-session' }).catch(showError),
+  'choose-backup': async () => {
+    try {
+      if (S.server.native) await api('backup/choose', {});
+      else await api('backup/set', { dir: (($('#backup-input') || {}).value || '').trim() });
+      toast(t('saved'));
+      await poll(true);
     } catch (e) { showError(e); }
   },
   'flash-retry': async () => {
@@ -972,7 +1158,11 @@ document.addEventListener('click', ev => {
 });
 document.addEventListener('change', ev => {
   if (ev.target.matches('[data-action="pick-port"]')) actions['pick-port'](ev.target);
+  if (ev.target.id === 'restore-full') S.restore.full = ev.target.checked;
 });
+document.addEventListener('toggle', ev => {
+  if (ev.target.matches && ev.target.matches('#restore-main details.log')) S.restore.logOpen = ev.target.open;
+}, true);
 let searchTimer = null;
 document.addEventListener('input', ev => {
   if (ev.target.id !== 'search') return;
@@ -1035,6 +1225,7 @@ async function poll(forceRender) {
       if (inline) { inline.innerHTML = syncBody(); applyWidths(inline); } else render();
     }
     if (S.modal === 'sync' || S.modal === 'flash') updateModal();
+    if (r.name === 'restore') updateRestore();
   }
   const busy = st.sync.running || st.flash.active || S.modal === 'flash';
   pollTimer = setTimeout(poll, busy ? 700 : 4000);

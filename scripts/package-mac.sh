@@ -26,10 +26,11 @@ python_bin=${PLAYS_PYTHON:-python3.12}
 "$python_bin" -c 'import sys; assert sys.version_info >= (3, 12), "Packaging requires Python 3.12 or later"'
 if [ ! -x .runtime/worker-venv/bin/python ]; then "$python_bin" -m venv .runtime/worker-venv; fi
 .runtime/worker-venv/bin/python -m pip install -q -r worker/requirements.lock
-.runtime/worker-venv/bin/python -m unittest -q worker/test_worker.py
+.runtime/worker-venv/bin/python -m unittest discover -q -s worker -p 'test_*.py'
 .runtime/worker-venv/bin/python -m pip freeze > .runtime/worker-resolved.txt
 .runtime/worker-venv/bin/python -m PyInstaller --noconfirm --clean --onedir --console --name "$worker" \
   --distpath .runtime/worker-dist --workpath .runtime/worker-build --specpath .runtime \
+  --paths worker --hidden-import restore \
   --collect-all esptool --collect-all esp_pylib worker/main.py
 
 go test ./...
@@ -40,7 +41,7 @@ go build -tags production -trimpath -ldflags "-s -w -X main.version=$version" -o
 cp -R ".runtime/worker-dist/$worker/." "$app/Contents/Resources/worker/"
 cp assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 cp .runtime/worker-resolved.txt "$app/Contents/Resources/ThirdParty/python-packages.txt"
-cp worker/main.py worker/requirements.txt THIRD_PARTY.md "$app/Contents/Resources/ThirdParty/"
+cp worker/main.py worker/restore.py worker/requirements.txt THIRD_PARTY.md "$app/Contents/Resources/ThirdParty/"
 .runtime/worker-venv/bin/python scripts/collect-licenses.py "$app/Contents/Resources/ThirdParty/licenses"
 mkdir -p .runtime/sources
 if [ ! -f .runtime/sources/esptool-5.6.0.tar.gz ]; then

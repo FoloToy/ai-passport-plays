@@ -10,3 +10,6 @@ __pycache__/
 *.dmg
 *.app/
 *.log
+
+# Bundled factory restore segments (hash-checked in internal/factory)
+!internal/factory/firmware/*.bin
