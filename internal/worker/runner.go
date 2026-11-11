@@ -54,6 +54,7 @@ type Event struct {
 	// Factory restore and cardid events.
 	Port      string `json:"port,omitempty"`
 	Session   string `json:"session,omitempty"`
+	File      string `json:"file,omitempty"`
 	CardID    string `json:"cardid,omitempty"`
 	Status    string `json:"status,omitempty"`
 	Overwrite bool   `json:"overwrite,omitempty"`
@@ -129,7 +130,9 @@ func (r Runner) Flash(ctx context.Context, req Request, on func(Event)) error {
 // Restore runs a factory restore. Closing cancel asks the worker to stop; it only stops
 // before writing starts, so a restore is never left half-written.
 func (r Runner) Restore(ctx context.Context, req Request, on func(Event), cancel <-chan struct{}) error {
-	req.Command = "restore"
+	if req.Command != "backup" { // a firmware backup uses the same flow, read only
+		req.Command = "restore"
+	}
 	return r.stream(ctx, req, on, cancel)
 }
 

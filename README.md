@@ -10,6 +10,7 @@ The offline desktop edition of the AI Passport App Library. It downloads every p
 - **分类**：左侧分类（游戏与互动、效率与工具……）和专题（必玩精选等），带数量。
 - **详情**：图集、玩法介绍、使用说明、更新日志、作者。
 - **刷机**：选择串口 → 校验固件 → 检测芯片必须是 ESP32-C3、Flash 至少 8 MB、未开启安全启动 → 从 0x0 写入 → 回读校验 → 重启。一次刷一台。
+- **备份固件**：把设备上现有的整片 Flash（8 MB）读出来保存到电脑，只读不写，并和设备上计算的 MD5 核对。
 - **恢复出厂**：一键把 AI Passport 恢复成出厂固件，不用选串口（详见下文）。取代原来的 FoloToy-AI-Passport-Factory-Restore 工具。
 - **设置**：选择 / 更换玩法存储目录（可迁移已有数据）、检查更新、语言（跟随系统 / 中文 / English）。
 - **首次启动**：安装包里不带任何玩法。首次打开时引导用户选择目录并下载。
@@ -25,6 +26,10 @@ The offline desktop edition of the AI Passport App Library. It downloads every p
 
 > **服务器限流**：社区的固件下载接口（`/api/download/...`）按 IP 限流。实测连续下载约 30 个后返回 HTTP 429，封禁会持续 25 分钟以上。App 遇到 429 会让所有固件下载一起暂停并逐步退避（30 秒起，最长 10 分钟，并遵守 `Retry-After`），界面上会显示倒计时，不会把这些玩法记为失败。在固件全部下载完之前，点"刷入"会先单独下载那一个固件（排到队列最前面）。
 > 要让首次全量下载顺利完成，建议后端为桌面端放宽限流（请求头带 `User-Agent: AIPassportPlays/<版本>`），或者提供 CDN / 离线数据包。
+
+## 备份固件
+
+在"设备工具"页点"开始备份"。和恢复出厂一样会自动找设备，然后读取整片 Flash，保存为 `<备份目录>/<时间>-<MAC>-firmware-backup/AI-Passport-<MAC>-<时间>-full-flash.bin`，旁边有 `.sha256`、日志和报告。读完后让设备自己计算 MD5 并比对，一致才算成功。不会向设备写入任何内容。
 
 ## 恢复出厂
 

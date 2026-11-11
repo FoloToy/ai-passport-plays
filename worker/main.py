@@ -5,7 +5,7 @@ Commands:
   ports        print the USB serial ports as JSON
   version      print worker / esptool versions
   self-test    check the bundled ESP32-C3 flasher stub
-  (default)    read one JSON request (flash or restore) from stdin and stream events;
+  (default)    read one JSON request (flash, restore or backup) from stdin and stream events;
                during a restore, a later {"command":"cancel"} line asks it to stop safely
 """
 import contextlib
@@ -183,8 +183,9 @@ def run_restore(request):
     from esptool.logger import EsptoolLogger
     cancel = threading.Event()
     restore.watch_cancel(sys.stdin, cancel)
-    job = restore.Restore(request['firmwareDir'], request['backupDir'], bool(request.get('fullBackup', True)),
-                          emit, cancel, port=request.get('port') or None)
+    mode = 'backup' if request.get('command') == 'backup' else 'restore'
+    job = restore.Restore(request.get('firmwareDir'), request['backupDir'], bool(request.get('fullBackup', True)),
+                          emit, cancel, port=request.get('port') or None, mode=mode)
     EsptoolLogger().set_logger(logger(sink=job.raw))
     result = job.run()
     emit('complete', **result)
@@ -228,10 +229,10 @@ def main():
     try:
         request = json.loads(sys.stdin.readline())
         command = request.get('command')
-        if command not in ('flash', 'restore'):
-            raise FlashError('protocol', 'Expected flash or restore command')
+        if command not in ('flash', 'restore', 'backup'):
+            raise FlashError('protocol', 'Expected flash, restore or backup command')
         with contextlib.redirect_stdout(LogStream()), contextlib.redirect_stderr(LogStream()):
-            if command == 'restore':
+            if command in ('restore', 'backup'):
                 run_restore(request)
             else:
                 flash(request)

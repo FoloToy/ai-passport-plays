@@ -70,7 +70,12 @@ const I18N = {
     err_worker: '刷机组件不可用。', err_other: '发生错误。', err_no_picker: '请直接输入文件夹路径。',
     err_rate_limited: '固件服务器繁忙，请稍后重试。', err_no_firmware: '这个玩法没有可下载的固件。', err_not_ready: '固件还没有下载。',
     // factory restore
-    nav_restore: '恢复出厂', restore_title: '恢复出厂',
+    nav_restore: '设备工具', tools_title: '设备工具', tools_lead: '备份或恢复 AI Passport 上的固件。两个工具都会自动找到设备，不用选串口。', restore_title: '恢复出厂',
+    backup_title: '备份固件', backup_lead: '把设备上现有的固件完整读出来，保存到电脑上（8 MB）。只读取，不会改动设备。刷入新玩法或恢复出厂前，可以先备份一份。',
+    backup_start: '开始备份', backup_again: '再备份一次', b_idle_sub: '连接一台 AI Passport 后点“开始备份”；等待连接时按提示拔插一次 USB。',
+    b_backup: '正在读取固件', b_backup_sub: '大约需要 1–3 分钟，请保持设备连接', b_verifying: '正在核对备份', b_verifying_sub: '和设备上的内容逐字节比对',
+    b_done: '备份完成', b_done_sub: '固件已保存，并与设备上的内容核对一致。', b_failed: '备份没有完成', b_saved_to: '保存位置',
+    b_warn: '备份过程中请勿拔出设备。备份只读取设备，不会写入任何内容。', r_busy_backup: '正在备份固件，完成后才能开始其他操作。', r_busy_restore: '正在恢复出厂，完成后才能开始其他操作。',
     restore_lead: '把 AI Passport 恢复成出厂固件。适用于刷入玩法后无法启动、反复重启，或连接电脑后很快断开的情况。',
     restore_step1: '只连接一台需要恢复的 AI Passport', restore_step2: '点击“一键恢复出厂”；等待连接时，按提示拔插一次 USB',
     restore_start: '一键恢复出厂', restore_confirm: '请确认电脑只连接了一台 AI Passport。开始后请勿拔线，也不要关闭本程序。',
@@ -157,7 +162,12 @@ const I18N = {
     err_worker: 'The flashing component is unavailable.', err_other: 'Something went wrong.', err_no_picker: 'Type the folder path instead.',
     err_rate_limited: 'The firmware server is busy. Try again later.', err_no_firmware: 'This app has no downloadable firmware.', err_not_ready: 'Firmware not downloaded yet.',
     // factory restore
-    nav_restore: 'Factory restore', restore_title: 'Factory restore',
+    nav_restore: 'Device tools', tools_title: 'Device tools', tools_lead: 'Back up or restore the firmware on an AI Passport. Both tools find the device by themselves; no port to choose.', restore_title: 'Factory restore',
+    backup_title: 'Back up firmware', backup_lead: 'Read the whole firmware on the device and save it on this computer (8 MB). It only reads; the device is not changed. Make one before installing an app or restoring.',
+    backup_start: 'Start backup', backup_again: 'Back up again', b_idle_sub: 'Connect one AI Passport and click “Start backup”; replug USB once if asked while it waits.',
+    b_backup: 'Reading the firmware', b_backup_sub: 'About 1–3 minutes; keep the device connected', b_verifying: 'Checking the backup', b_verifying_sub: 'Comparing it with the device',
+    b_done: 'Backup finished', b_done_sub: 'The firmware is saved and matches the device.', b_failed: 'The backup did not finish', b_saved_to: 'Saved to',
+    b_warn: 'Do not unplug the device during the backup. It only reads; nothing is written to the device.', r_busy_backup: 'A firmware backup is running. Wait for it to finish.', r_busy_restore: 'A factory restore is running. Wait for it to finish.',
     restore_lead: 'Put the factory firmware back on an AI Passport. Use it when the device will not start after installing an app, keeps rebooting, or disconnects soon after you plug it in.',
     restore_step1: 'Connect only the AI Passport you want to restore', restore_step2: 'Click “Restore factory firmware”; while it waits, unplug and replug USB once if asked',
     restore_start: 'Restore factory firmware', restore_confirm: 'Make sure only one AI Passport is connected. Do not unplug it or close the app once it starts.',
@@ -773,9 +783,10 @@ function renderRestore() {
   const r = st.restore || {};
   const busy = st.flash.active;
   return `<div class="settings restore">
-    <h1>${t('restore_title')}</h1>
-    <p class="lead">${t('restore_lead')}</p>
-    <section class="panel" id="restore-main">${restoreMain()}</section>
+    <h1>${t('tools_title')}</h1>
+    <p class="lead">${t('tools_lead')}</p>
+    <section class="panel"><h2>${t('backup_title')}</h2><p>${t('backup_lead')}</p><div id="backup-main">${backupMain()}</div></section>
+    <section class="panel"><h2>${t('restore_title')}</h2><p>${t('restore_lead')}</p><div id="restore-main">${restoreMain()}</div></section>
     <section class="panel">
       <h2>${t('r_options')}</h2><p>${t('r_safety')}</p>
       <dl class="kv"><dt>${t('r_backup_dir')}</dt><dd class="ellipsis" title="${esc(r.backupDir || '')}">${esc(r.backupDir || '—')}</dd><dt>${t('r_fw')}</dt><dd>${esc(r.firmware || '')}</dd></dl>
@@ -792,11 +803,11 @@ function renderRestore() {
 function restoreMain() {
   const st = S.server;
   const f = restoreState();
-  const logs = f.logs && f.logs.length ? `<details class="log"${S.restore.logOpen ? ' open' : ''}><summary>${t('log')}</summary><pre>${esc(f.logs.join('\n'))}</pre></details>` : '';
-  const info = f.mac ? `<dl class="kv"><dt>${t('chip')}</dt><dd>${esc(f.chip)}</dd><dt>${t('mac')}</dt><dd>${esc(f.mac)}</dd><dt>${t('flash_size')}</dt><dd>${esc(f.flash)}</dd></dl>` : '';
+  const logs = logBlock(f);
+  const info = deviceInfo(f);
   const steps = `<ol class="restore-steps"><li><b>1</b>${t('restore_step1')}</li><li><b>2</b>${t('restore_step2')}</li></ol>`;
   if (st.flash.active && st.flash.kind !== 'restore') {
-    return `${steps}<div class="notice">${t('r_busy_flash')}</div>`;
+    return `${steps}<div class="notice">${busyText(st.flash.kind)}</div>`;
   }
   if (f.stage === 'idle' || f.stage === 'cancelled') {
     const head = f.stage === 'cancelled' ? `<h3>${t('r_cancelled')}</h3><p class="m-sub">${t('r_cancelled_sub')}</p>` : `<h3>${t('r_idle')}</h3><p class="m-sub">${t('r_idle_sub')}</p>`;
@@ -818,33 +829,71 @@ function restoreMain() {
       ${serious ? '' : `<p class="center-note">${t('r_failed_sub')}</p>`}
       <div class="buttons center">${f.session || serious ? `<button class="btn" data-action="reveal-backup">${t('open_backup')}</button>` : ''}${serious ? '' : `<button class="btn primary" data-action="restore-retry">${t('retry')}</button>`}</div>${logs}`;
   }
-  // running
+  return runningBody(f, 'restore', steps);
+}
+
+const busyText = kind => t(kind === 'backup' ? 'r_busy_backup' : kind === 'restore' ? 'r_busy_restore' : 'r_busy_flash');
+
+function logBlock(f) {
+  return f.logs && f.logs.length ? `<details class="log"${S.restore.logOpen ? ' open' : ''}><summary>${t('log')}</summary><pre>${esc(f.logs.join('\n'))}</pre></details>` : '';
+}
+
+function deviceInfo(f) {
+  return f.mac ? `<dl class="kv"><dt>${t('chip')}</dt><dd>${esc(f.chip)}</dd><dt>${t('mac')}</dt><dd>${esc(f.mac)}</dd><dt>${t('flash_size')}</dt><dd>${esc(f.flash)}</dd></dl>` : '';
+}
+
+// Progress view shared by the factory restore and the firmware backup.
+function runningBody(f, kind, steps) {
+  const label = k => (kind === 'backup' && I18N.zh['b_' + k] ? t('b_' + k) : t('r_' + k));
   let key = f.stage === 'checking' ? 'connecting' : f.stage === 'cardid' ? 'verifying' : f.stage;
   if (!I18N.zh['r_' + key]) key = 'preparing';
-  let sub = t('r_' + key + '_sub');
+  let sub = label(key + '_sub');
   if (f.stage === 'waiting') sub = f.hint === 'multiple' ? t('r_multiple') : f.hint === 'code43' ? t('r_code43', f.port || 'COM') : t('r_replug');
   const idx = Math.max(0, RESTORE_STAGES.indexOf(f.stage));
-  const measured = ['backup', 'writing', 'verifying'].includes(f.stage);
-  const bar = f.stage === 'waiting'
+  const measured = f.stage === 'backup' || (kind === 'restore' && ['writing', 'verifying'].includes(f.stage));
+  const bar = f.stage === 'waiting' || (kind === 'backup' && f.stage === 'verifying')
     ? `<div class="big-progress indeterminate"><i></i></div>`
     : `<div class="big-progress"><i data-w="${measured ? f.percent : Math.round((idx / RESTORE_STAGES.length) * 100)}"></i></div>`;
-  const writing = ['writing', 'verifying', 'cardid', 'resetting'].includes(f.stage);
+  const writing = kind === 'restore' && ['writing', 'verifying', 'cardid', 'resetting'].includes(f.stage);
   const stop = writing ? '' : `<button class="btn ghost" data-action="restore-cancel" ${f.cancelling ? 'disabled' : ''}>${f.cancelling ? t('restore_stopping') : t('restore_stop')}</button>`;
-  return `${steps}<div class="restore-status"><h3><span class="spinner"></span>${t('r_' + key)}</h3><p class="m-sub">${esc(sub)}</p></div>
+  return `${steps}<div class="restore-status"><h3><span class="spinner"></span>${label(key)}</h3><p class="m-sub">${esc(sub)}</p></div>
     ${bar}<div class="progress-meta"><span>${esc(f.port || '')}</span><span>${measured ? f.percent + '%' : ''}</span></div>
-    ${info}<div class="sp12"></div><div class="notice">${t('r_warn')}</div><div class="buttons">${stop}</div>${logs}`;
+    ${deviceInfo(f)}<div class="sp12"></div><div class="notice">${t(kind === 'backup' ? 'b_warn' : 'r_warn')}</div><div class="buttons">${stop}</div>${logBlock(f)}`;
+}
+
+function backupMain() {
+  const st = S.server;
+  const f = st.flash && st.flash.kind === 'backup' ? st.flash : { stage: 'idle', logs: [] };
+  if (st.flash.active && st.flash.kind !== 'backup') return `<div class="notice">${busyText(st.flash.kind)}</div>`;
+  if (f.stage === 'idle' || f.stage === 'cancelled') {
+    const head = f.stage === 'cancelled' ? `<p class="m-sub">${t('r_cancelled')}</p>` : `<p class="m-sub">${t('b_idle_sub')}</p>`;
+    return `${head}${st.worker ? '' : `<div class="notice red mt10">${t('err_worker')}</div>`}
+      <div class="buttons"><button class="btn soft large wide" data-action="backup-go" ${st.worker ? '' : 'disabled'}>${t('backup_start')}</button></div>${logBlock(f)}`;
+  }
+  if (f.stage === 'done') {
+    return `<div class="result"><div class="icon">✓</div><h3>${t('b_done')}</h3><p>${t('b_done_sub')}</p></div>${deviceInfo(f)}
+      <dl class="kv"><dt>${t('b_saved_to')}</dt><dd class="ellipsis" title="${esc(f.file || '')}">${esc(f.file || f.session || '')}</dd></dl>
+      <div class="buttons"><button class="btn" data-action="reveal-session">${t('open_backup')}</button><button class="btn ghost" data-action="backup-again">${t('backup_again')}</button></div>${logBlock(f)}`;
+  }
+  if (f.stage === 'failed') {
+    return `<div class="result fail"><div class="icon">!</div><h3>${t('b_failed')}</h3><p>${esc(errText(f.errorCode, f.error))}</p></div>${deviceInfo(f)}
+      <div class="buttons center"><button class="btn primary" data-action="backup-go">${t('retry')}</button></div>${logBlock(f)}`;
+  }
+  return runningBody(f, 'backup', '');
 }
 
 function updateRestore() {
-  const el = $('#restore-main');
-  if (!el) return;
-  const pre = el.querySelector('details.log pre');
-  const atBottom = pre ? pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8 : true;
-  const top = pre ? pre.scrollTop : 0;
-  el.innerHTML = restoreMain();
-  applyWidths(el);
-  const np = el.querySelector('details.log pre');
-  if (np) np.scrollTop = atBottom ? np.scrollHeight : top;
+  for (const [id, body] of [['#backup-main', backupMain], ['#restore-main', restoreMain]]) {
+    const el = $(id);
+    if (!el) continue;
+    const pre = el.querySelector('details.log pre');
+    const atBottom = pre ? pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8 : true;
+    const top = pre ? pre.scrollTop : 0;
+    el.innerHTML = body();
+    applyWidths(el);
+    const np = el.querySelector('details.log pre');
+    if (np) np.scrollTop = atBottom ? np.scrollHeight : top;
+  }
   const full = $('#restore-full');
   if (full) full.disabled = S.server.flash.active;
 }
@@ -1089,7 +1138,7 @@ const actions = {
     S.checking = false; await poll(); render();
   },
   'flash': el => {
-    if (S.server.flash.active && S.server.flash.kind === 'restore') { toast(t('err_busy'), true); return; }
+    if (S.server.flash.active && S.server.flash.kind !== 'flash') { toast(t('err_busy'), true); return; }
     S.flash.slug = el.dataset.slug;
     S.flash.port = '';
     S.modal = 'flash';
@@ -1116,6 +1165,10 @@ const actions = {
   'restore-go': () => startRestore(),
   'restore-retry': async () => { await api('flash/reset', {}).catch(() => {}); await startRestore(); },
   'restore-reset': async () => { await api('flash/reset', {}).catch(() => {}); await poll(true); },
+  'backup-go': async () => {
+    try { await api('flash/reset', {}).catch(() => {}); await api('firmware-backup/start', {}); await poll(true); } catch (e) { showError(e); }
+  },
+  'backup-again': async () => { await api('flash/reset', {}).catch(() => {}); await poll(true); },
   'restore-cancel': async () => { try { await api('restore/cancel', {}); } catch (e) { showError(e); } poll(); },
   'reveal-backup': () => api('reveal', { target: 'backup' }).catch(showError),
   'reveal-session': () => api('reveal', { target: 'restore-session' }).catch(showError),
@@ -1161,7 +1214,7 @@ document.addEventListener('change', ev => {
   if (ev.target.id === 'restore-full') S.restore.full = ev.target.checked;
 });
 document.addEventListener('toggle', ev => {
-  if (ev.target.matches && ev.target.matches('#restore-main details.log')) S.restore.logOpen = ev.target.open;
+  if (ev.target.matches && ev.target.matches('#restore-main details.log, #backup-main details.log')) S.restore.logOpen = ev.target.open;
 }, true);
 let searchTimer = null;
 document.addEventListener('input', ev => {

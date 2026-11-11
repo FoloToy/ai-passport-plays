@@ -253,6 +253,8 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		code, err = s.setBackupDir(body.Dir)
 	case "/api/restore/start":
 		code, err = s.startRestore(body.FullBackup == nil || *body.FullBackup)
+	case "/api/firmware-backup/start":
+		code, err = s.startBackup()
 	case "/api/restore/cancel":
 		if !s.Flash.Cancel() {
 			err, code = errors.New("the restore can no longer be stopped"), "not_cancellable"
@@ -434,6 +436,18 @@ func (s *Server) startRestore(fullBackup bool) (string, error) {
 		return "firmware", err
 	}
 	job := flasher.RestoreJob{FirmwareDir: fw, BackupDir: s.Settings.Get().Backups(), FullBackup: fullBackup}
+	if err := os.MkdirAll(job.BackupDir, 0o755); err != nil {
+		return "backup_dir", err
+	}
+	if err := s.Flash.StartRestore(job); err != nil {
+		return "busy", err
+	}
+	return "", nil
+}
+
+// startBackup saves the whole flash of the connected device; it never writes to it.
+func (s *Server) startBackup() (string, error) {
+	job := flasher.RestoreJob{BackupDir: s.Settings.Get().Backups(), Backup: true}
 	if err := os.MkdirAll(job.BackupDir, 0o755); err != nil {
 		return "backup_dir", err
 	}

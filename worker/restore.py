@@ -289,6 +289,10 @@ class Device:
         cmds.write_flash(self.esp, addr_files, flash_freq='keep', flash_mode='keep', flash_size='keep',
                          compress=True, erase_all=False, force=False)
 
+    def md5(self, offset, size):
+        """MD5 of a flash range, computed on the device itself."""
+        return self.esp.flash_md5sum(offset, size)
+
     def verify(self, addr_files):
         from esptool import cmds
         cmds.verify_flash(self.esp, addr_files, flash_freq='keep', flash_mode='keep', flash_size='keep')
@@ -313,8 +317,10 @@ class Restore:
     def __init__(self, firmware_dir, backup_root, full_backup, emit, cancel,
                  port=None, connect=Device.connect, candidates=list_candidates,
                  capture=quick_bootloader_reset, hints=problem_port_hints,
-                 timeout=CONNECT_TIMEOUT, interval=SCAN_INTERVAL):
-        self.firmware_dir = Path(firmware_dir)
+                 timeout=CONNECT_TIMEOUT, interval=SCAN_INTERVAL, mode='restore'):
+        # mode 'backup' only reads the device: it saves the whole flash and never writes.
+        self.mode = mode
+        self.firmware_dir = Path(firmware_dir) if firmware_dir else None
         self.backup_root = Path(backup_root)
         self.full_backup = full_backup
         self.emit = emit
@@ -356,9 +362,13 @@ class Restore:
         self.log_path = self.backup_root / 'last-connection.log'
         self.log_path.write_text('', encoding='utf-8')
         self.stage('preparing')
-        self.log('Factory firmware %s' % FACTORY_VERSION)
-        addr_files = validate_firmware(self.firmware_dir)
-        self.log('Factory firmware size, SHA-256 and cardid layout checked')
+        addr_files = None
+        if self.mode == 'restore':
+            self.log('Factory firmware %s' % FACTORY_VERSION)
+            addr_files = validate_firmware(self.firmware_dir)
+            self.log('Factory firmware size, SHA-256 and cardid layout checked')
+        else:
+            self.log('Firmware backup (read only; nothing is written to the device)')
 
         device = None
         try:
@@ -367,6 +377,8 @@ class Restore:
                 device = self._open(self.port, 'default-reset', 10)
             else:
                 device = self.auto_connect()
+            if self.mode == 'backup':
+                return self._backup(device)
             return self._restore(device, addr_files)
         finally:
             if device is not None:
@@ -471,6 +483,80 @@ class Restore:
             self.log('Firmware verified, but the automatic reset failed (%s); unplug and replug the device' % error)
         self.log('Factory restore finished: firmware verified, cardid unchanged')
         return dict(mac=mac, session=str(session), cardid=status)
+
+    def _backup(self, device):
+        """Save the device's whole flash, checked against an MD5 computed on the device."""
+        self.check_cancel()
+        chip = device.chip()
+        if chip.lower().replace('-', '') != CHIP:
+            raise RestoreError('wrong_chip', 'Detected %s; AI Passport uses ESP32-C3' % chip)
+        mac = device.mac()
+        self.log('ESP32-C3 locked on %s, MAC %s' % (self.port, mac))
+        stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        session = self.backup_root / ('%s-%s-firmware-backup' % (stamp, mac.replace(':', '')))
+        session.mkdir(parents=True, exist_ok=False)
+        self.log_path = session / 'firmware-backup.log'
+        self.log_path.write_text('\n'.join(self._lines) + '\n', encoding='utf-8')
+        self.log('Backup folder: %s' % session)
+
+        self.stage('checking')
+        try:
+            secure_boot, encryption = device.security()
+            security = 'secure_boot=%s, flash_encryption=%s' % (
+                'enabled' if secure_boot else 'disabled', 'enabled' if encryption else 'disabled')
+        except Exception as error:
+            encryption, security = False, 'unknown (%s)' % error
+        if encryption:
+            self.log('Flash Encryption is enabled; the backup holds encrypted data and only fits this device')
+        size_text = device.prepare()
+        size = parse_size(size_text)
+        if not size:
+            raise RestoreError('flash_size', 'Could not detect the flash size (%s)' % (size_text or 'unknown'))
+        self.emit('identified', chip=chip, mac=mac, flash=size_text)
+
+        self.check_cancel()
+        self.stage('backup')
+        name = 'AI-Passport-%s-%s-full-flash.bin' % (mac.replace(':', ''), stamp)
+        path = session / name
+        self.log('Reading the whole %s flash; this takes a few minutes' % size_text)
+        if shutil.disk_usage(session).free < size + (32 << 20):
+            raise RestoreError('disk_space', 'Not enough free space in the backup folder')
+        self._read(device, 0, size, path)
+
+        self.stage('verifying')
+        local_md5 = hashlib.md5(path.read_bytes()).hexdigest()
+        try:
+            device_md5 = device.md5(0, size).lower()
+        except Exception as error:
+            raise RestoreError('backup', 'Could not check the backup against the device: %s' % error)
+        if device_md5 != local_md5:
+            raise RestoreError('backup', 'The saved backup does not match the device; try again')
+        digest = sha256_file(path)
+        cardid = cardid_status(path.read_bytes()[CARDID_OFFSET:CARDID_OFFSET + CARDID_SIZE]) if size >= CARDID_OFFSET + CARDID_SIZE else 'bad_length'
+        (path.parent / (name + '.sha256')).write_text('%s  %s\n' % (digest, name), encoding='ascii')
+        (session / 'firmware-backup-report.txt').write_text('\n'.join([
+            'tool=AI Passport Plays firmware backup',
+            'time=%s' % datetime.now().isoformat(timespec='seconds'),
+            'port=%s' % self.port,
+            'chip=%s' % CHIP,
+            'mac=%s' % mac,
+            'flash_size=%s' % size_text,
+            'security=%s' % security,
+            'file=%s' % name,
+            'sha256=%s' % digest,
+            'md5_device_match=yes',
+            'cardid_status=%s' % cardid,
+            'written_to_device=no',
+            'result=success',
+        ]) + '\n', encoding='utf-8')
+        self.log('Backup saved and checked against the device: %s' % path)
+
+        self.stage('resetting')
+        try:
+            device.reset()
+        except Exception as error:
+            self.log('Backup finished, but the automatic reset failed (%s); unplug and replug the device' % error)
+        return dict(mac=mac, session=str(session), cardid=cardid, file=str(path))
 
     def _read(self, device, offset, size, path):
         self._esptool('read', lambda: device.read(offset, size, path))

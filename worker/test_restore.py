@@ -61,6 +61,11 @@ class FakeDevice:
             data = Path(path).read_bytes()
             assert bytes(self.flash[addr:addr + len(data)]) == data
 
+    def md5(self, offset, size):
+        import hashlib
+        self.calls.append('md5')
+        return hashlib.md5(bytes(self.flash[offset:offset + size])).hexdigest()
+
     def reset(self):
         self.calls.append('reset')
 
@@ -185,6 +190,50 @@ class Workflow(unittest.TestCase):
             with self.assertRaises(restore.RestoreError) as ctx:
                 make(d, dev)[0].run()
         self.assertEqual(ctx.exception.code, 'cardid_changed')
+
+
+class Backup(unittest.TestCase):
+    def run_backup(self, dev, d):
+        events = []
+        job = restore.Restore(None, d, False, lambda kind, **f: events.append(dict(type=kind, **f)),
+                              threading.Event(), port='COM9', connect=lambda *a: dev, mode='backup')
+        return job.run(), events
+
+    def test_backup_saves_whole_flash_and_never_writes(self):
+        dev = FakeDevice()
+        dev.flash[0:4] = b'\xe9\x03\x02\x3f'
+        with tempfile.TemporaryDirectory() as d:
+            result, events = self.run_backup(dev, d)
+            path = Path(result['file'])
+            self.assertEqual(path.read_bytes(), bytes(dev.flash))
+            self.assertTrue(path.with_name(path.name + '.sha256').is_file())
+            report = (Path(result['session']) / 'firmware-backup-report.txt').read_text()
+            self.assertIn('written_to_device=no', report)
+            self.assertIn('md5_device_match=yes', report)
+            self.assertEqual(result['cardid'], 'keys')
+        self.assertFalse(any(isinstance(c, tuple) and c[0] == 'write' for c in dev.calls))
+        self.assertNotIn('verify', dev.calls)
+        stages = [e['stage'] for e in events if e['type'] == 'stage']
+        self.assertEqual(stages, ['preparing', 'connecting', 'checking', 'backup', 'verifying', 'resetting'])
+
+    def test_backup_needs_no_factory_firmware(self):
+        with tempfile.TemporaryDirectory() as d:
+            result, _ = self.run_backup(FakeDevice(size='4MB'), d)
+            self.assertEqual(Path(result['file']).stat().st_size, 4 << 20)
+
+    def test_backup_mismatch_is_reported(self):
+        dev = FakeDevice()
+        dev.md5 = lambda offset, size: '0' * 32
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(restore.RestoreError) as ctx:
+                self.run_backup(dev, d)
+        self.assertEqual(ctx.exception.code, 'backup')
+
+    def test_backup_refuses_other_chips(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(restore.RestoreError) as ctx:
+                self.run_backup(FakeDevice(chip='ESP32-S3'), d)
+        self.assertEqual(ctx.exception.code, 'wrong_chip')
 
 
 class AutoConnect(unittest.TestCase):

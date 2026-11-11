@@ -161,3 +161,22 @@ func TestRestoreCancelOnlyBeforeWriting(t *testing.T) {
 		t.Fatalf("unexpected state %+v", s)
 	}
 }
+
+func TestBackupJobIsReadOnlyAndCancellable(t *testing.T) {
+	r := &fakeRunner{restore: func(on func(worker.Event), cancel <-chan struct{}) error {
+		on(worker.Event{Type: "stage", Stage: "backup"})
+		on(worker.Event{Type: "complete", MAC: "aa:bb", Session: "/b/s", File: "/b/s/full.bin", CardID: "keys"})
+		return nil
+	}}
+	m := New(r)
+	if err := m.StartRestore(RestoreJob{BackupDir: "/b", Backup: true}); err != nil {
+		t.Fatal(err)
+	}
+	s := wait(t, m)
+	if s.Kind != "backup" || s.Stage != "done" || s.File != "/b/s/full.bin" {
+		t.Fatalf("unexpected state %+v", s)
+	}
+	if r.req.Command != "backup" {
+		t.Fatalf("worker command %q", r.req.Command)
+	}
+}

@@ -25,7 +25,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-var version = "0.2.0-dev"
+var version = "0.3.0-dev"
 
 const appTitle = "AI Passport 玩法社区"
 

@@ -14,7 +14,7 @@ import (
 
 type State struct {
 	Active bool `json:"active"`
-	// Kind is "flash" (install a play) or "restore" (factory restore).
+	// Kind is "flash" (install a play), "restore" (factory restore) or "backup" (read the whole flash).
 	Kind string `json:"kind,omitempty"`
 	Slug string `json:"slug,omitempty"`
 	Port string `json:"port,omitempty"`
@@ -30,7 +30,8 @@ type State struct {
 	Logs      []string `json:"logs"`
 	// Restore details.
 	Hint       string `json:"hint,omitempty"`    // multiple, code43, replug
-	Session    string `json:"session,omitempty"` // backup folder of this restore
+	Session    string `json:"session,omitempty"` // backup folder of this restore or backup
+	File       string `json:"file,omitempty"`    // the saved flash image of a backup
 	CardID     string `json:"cardid,omitempty"`  // keys, blank_ff, blank_00, unknown
 	Cancelling bool   `json:"cancelling,omitempty"`
 	// CardIDOverwritten is set when a play image replaced a non-blank identity area.
@@ -55,6 +56,8 @@ type RestoreJob struct {
 	FirmwareDir string
 	BackupDir   string
 	FullBackup  bool
+	// Backup only reads the device and saves its whole flash; nothing is written.
+	Backup bool
 }
 
 type Runner interface {
@@ -112,7 +115,7 @@ func (m *Manager) Start(job Job) error {
 	return nil
 }
 
-// StartRestore begins a factory restore.
+// StartRestore begins a factory restore, or a read-only firmware backup when job.Backup is set.
 func (m *Manager) StartRestore(job RestoreJob) error {
 	m.mu.Lock()
 	if m.state.Active {
@@ -123,12 +126,16 @@ func (m *Manager) StartRestore(job RestoreJob) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	m.cancel = cancel
 	m.stop, m.stopOnce = make(chan struct{}), sync.Once{}
-	m.state = State{Active: true, Kind: "restore", Stage: "preparing", Logs: []string{}, StartedAt: time.Now()}
+	kind, command := "restore", ""
+	if job.Backup {
+		kind, command = "backup", "backup"
+	}
+	m.state = State{Active: true, Kind: kind, Stage: "preparing", Logs: []string{}, StartedAt: time.Now()}
 	stop := m.stop
 	m.mu.Unlock()
 	go func() {
 		defer cancel()
-		err := m.runner.Restore(ctx, worker.Request{FirmwareDir: job.FirmwareDir, BackupDir: job.BackupDir, FullBackup: job.FullBackup}, m.event, stop)
+		err := m.runner.Restore(ctx, worker.Request{Command: command, FirmwareDir: job.FirmwareDir, BackupDir: job.BackupDir, FullBackup: job.FullBackup}, m.event, stop)
 		var ce *worker.CodedError
 		if errors.As(err, &ce) && ce.Code == "cancelled" {
 			m.mu.Lock()
@@ -146,12 +153,14 @@ func (m *Manager) StartRestore(job RestoreJob) error {
 func (m *Manager) Cancel() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if !m.state.Active || m.state.Kind != "restore" {
+	if !m.state.Active || (m.state.Kind != "restore" && m.state.Kind != "backup") {
 		return false
 	}
-	switch m.state.Stage {
-	case "writing", "verifying", "cardid", "resetting":
-		return false
+	if m.state.Kind == "restore" {
+		switch m.state.Stage {
+		case "writing", "verifying", "cardid", "resetting":
+			return false
+		}
 	}
 	m.state.Cancelling = true
 	m.stopOnce.Do(func() { close(m.stop) })
@@ -222,6 +231,7 @@ func (m *Manager) event(ev worker.Event) {
 		if ev.Session != "" {
 			m.state.Session = ev.Session
 		}
+		m.state.File = ev.File
 		if ev.CardID != "" {
 			m.state.CardID = ev.CardID
 		}

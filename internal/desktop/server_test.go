@@ -154,3 +154,17 @@ func TestRestoreNeedsStateDir(t *testing.T) {
 		t.Fatalf("want firmware error, got %d %s", w.Code, w.Body)
 	}
 }
+
+func TestFirmwareBackupStartsReadOnlyJob(t *testing.T) {
+	s, _ := newServer(t)
+	dir := t.TempDir()
+	if _, err := s.Settings.Update(func(c *settings.Settings) { c.BackupDir = dir }); err != nil {
+		t.Fatal(err)
+	}
+	if w := do(s, "POST", "/api/firmware-backup/start", s.Token, `{}`); w.Code != 200 {
+		t.Fatalf("start: %d %s", w.Code, w.Body)
+	}
+	if st := s.Flash.Snapshot(); st.Kind != "backup" {
+		t.Fatalf("unexpected kind %q", st.Kind)
+	}
+}

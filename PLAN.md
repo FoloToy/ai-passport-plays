@@ -146,10 +146,12 @@ worker 端（esptool）：
 - 恢复流程移植到 `worker/restore.py`（esptool 5.6 Python API，整个流程只连接一次）。安全规则不变：分段写入、不擦除、不写身份区、写前备份、写后校验、身份区前后一致。
 - 自动抓取设备的逻辑（5 ms 级 DTR/RTS 复位、Windows Code 43 处理）原样保留；macOS 只使用 `/dev/cu.*`。
 - 写入开始后不能停止。刷入玩法和恢复出厂共用一个任务槽，同时只能运行一个。
+- 2026-11-11：新增"备份固件"（只读，读整片 Flash 并与设备端 MD5 核对），与恢复出厂放在同一个"设备工具"页，复用同一套自动找设备逻辑。
 
 ## 13. 待办
 
 - Windows 安装包：脚本已写好（`scripts/build-on-windows.ps1`，见 `docs/WINDOWS-BUILD.md`），待在真实 Windows 上运行和验收。
 - Developer ID 签名、公证；Windows 代码签名。
 - 实机刷机验收（需要连接 AI Passport）。
+- 备份固件实机验收（macOS 和 Windows）。
 - 恢复出厂实机验收（macOS 和 Windows）：正常设备、USB 只短暂出现的设备、拔插后端口变化、同时连两台、端口被占用、完整恢复后身份区一致。
