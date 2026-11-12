@@ -121,11 +121,19 @@ ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./internal/esp/ ./intern
 ## 打包（macOS）
 
 ```sh
-scripts/package-mac.sh          # 生成 dist/AI Passport 玩法社区.app 和 DMG
+scripts/package-mac.sh          # 生成 arm64、x86_64、universal 三个 DMG
 ALLOW_DIRTY=1 scripts/package-mac.sh   # 有未提交改动时也打包
 ```
 
-打出的包与当前 Mac 的架构一致（arm64 或 x86_64）。GitHub Actions 会同时构建两种架构。
+一次生成三个 DMG（App 分别放在 `dist/arm64/`、`dist/x86_64/`、`dist/universal/`）：
+
+| 文件 | 适用 |
+| --- | --- |
+| `AI-Passport-Plays-<版本>-macOS-arm64.dmg` | Apple 芯片（M 系列） |
+| `AI-Passport-Plays-<版本>-macOS-x86_64.dmg` | Intel 芯片 |
+| `AI-Passport-Plays-<版本>-macOS-universal.dmg` | 两种都能用，体积大一倍 |
+
+在 Apple 芯片的 Mac 上就能交叉编译出 Intel 版；装了 Rosetta 时，脚本会用 Rosetta 跑一遍 Intel 版的自检。
 
 目前**没有 Developer ID 签名和公证**，只做了 ad-hoc 签名。别人第一次打开时 macOS 会拦截，需要在"系统设置 → 隐私与安全性"里点"仍要打开"，或者右键 App 选择"打开"。
 

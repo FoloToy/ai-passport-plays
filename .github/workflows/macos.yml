@@ -29,12 +29,8 @@ jobs:
 
   package:
     needs: test
-    strategy:
-      matrix:
-        include:
-          - runner: macos-14   # Apple Silicon
-          - runner: macos-13   # Intel
-    runs-on: ${{ matrix.runner }}
+    # One Apple Silicon runner builds the arm64, x86_64 and universal DMGs.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -44,7 +40,7 @@ jobs:
         run: scripts/package-mac.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.runner }}
+          name: dmg
           path: |
             dist/*.dmg
             dist/*.sha256
