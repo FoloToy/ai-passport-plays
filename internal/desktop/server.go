@@ -20,12 +20,12 @@ import (
 	"time"
 
 	"github.com/FoloToy/ai-passport-plays/frontend"
+	"github.com/FoloToy/ai-passport-plays/internal/device"
 	"github.com/FoloToy/ai-passport-plays/internal/factory"
 	"github.com/FoloToy/ai-passport-plays/internal/flasher"
 	"github.com/FoloToy/ai-passport-plays/internal/library"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
 	"github.com/FoloToy/ai-passport-plays/internal/syncer"
-	"github.com/FoloToy/ai-passport-plays/internal/worker"
 )
 
 type Server struct {
@@ -33,7 +33,7 @@ type Server struct {
 	Settings *settings.Store
 	Sync     *syncer.Manager
 	Flash    *flasher.Manager
-	Worker   worker.Runner
+	Worker   device.Runner
 	Token    string
 	// StateDir is the private app folder; the factory firmware is unpacked under it.
 	StateDir string
@@ -51,7 +51,7 @@ type Server struct {
 	indexDir string
 }
 
-func New(version string, st *settings.Store, sm *syncer.Manager, fm *flasher.Manager, w worker.Runner) *Server {
+func New(version string, st *settings.Store, sm *syncer.Manager, fm *flasher.Manager, w device.Runner) *Server {
 	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)

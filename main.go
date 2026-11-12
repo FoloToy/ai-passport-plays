@@ -16,11 +16,13 @@ import (
 
 	"github.com/FoloToy/ai-passport-plays/assets"
 	"github.com/FoloToy/ai-passport-plays/internal/desktop"
+	"github.com/FoloToy/ai-passport-plays/internal/device"
+	"github.com/FoloToy/ai-passport-plays/internal/esp"
+	"github.com/FoloToy/ai-passport-plays/internal/factory"
 	"github.com/FoloToy/ai-passport-plays/internal/flasher"
 	"github.com/FoloToy/ai-passport-plays/internal/instance"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
 	"github.com/FoloToy/ai-passport-plays/internal/syncer"
-	"github.com/FoloToy/ai-passport-plays/internal/worker"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
@@ -32,11 +34,14 @@ const appTitle = "AI Passport 玩法社区"
 func main() {
 	headless := flag.Bool("headless", false, "Serve the UI on a private loopback HTTP listener (development)")
 	address := flag.String("listen", "127.0.0.1:0", "Loopback listener for -headless")
-	workerPath := flag.String("worker", "", "Worker executable or Python interpreter (development)")
-	workerScript := flag.String("worker-script", "", "Worker script run by -worker (development)")
+	selfTest := flag.Bool("self-test", false, "Check the bundled flasher stub and factory firmware, print JSON and exit")
 	stateDir := flag.String("state-dir", "", "Override the private settings directory")
 	origin := flag.String("origin", syncer.DefaultOrigin, "Community site origin")
 	flag.Parse()
+	if *selfTest {
+		runSelfTest()
+		return
+	}
 
 	dir := *stateDir
 	if dir == "" {
@@ -56,17 +61,7 @@ func main() {
 	}
 	defer unlock()
 
-	runner, werr := worker.Discover()
-	if *workerPath != "" {
-		runner, werr = worker.Runner{Executable: *workerPath}, nil
-		if *workerScript != "" {
-			runner.Prefix = []string{*workerScript}
-		}
-	}
-	if werr != nil {
-		log.Print(werr)
-	}
-
+	runner := device.Runner{}
 	sync := syncer.New(syncer.NewClient(*origin, version))
 	flash := flasher.New(runner)
 	server := desktop.New(version, store, sync, flash, runner)
@@ -157,4 +152,17 @@ func serveHeadless(server *desktop.Server, address string, sync *syncer.Manager)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(ctx)
+}
+
+// runSelfTest is used by the packaging scripts to check the built app.
+func runSelfTest() {
+	stub, err := esp.StubSize()
+	if err == nil {
+		err = factory.Verify()
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "self-test failed:", err)
+		os.Exit(1)
+	}
+	fmt.Printf(`{"passed":true,"version":%q,"chip":"ESP32-C3","stub_bytes":%d,"factory":%q}`+"\n", version, stub, factory.Version)
 }

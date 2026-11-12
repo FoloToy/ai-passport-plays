@@ -9,27 +9,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/worker"
+	"github.com/FoloToy/ai-passport-plays/internal/device"
 )
 
 type fakeRunner struct {
 	called  bool
 	err     error
-	restore func(on func(worker.Event), cancel <-chan struct{}) error
-	req     worker.Request
+	restore func(on func(device.Event), cancel <-chan struct{}) error
+	req     device.Request
 }
 
-func (f *fakeRunner) Restore(_ context.Context, req worker.Request, on func(worker.Event), cancel <-chan struct{}) error {
+func (f *fakeRunner) Restore(_ context.Context, req device.Request, on func(device.Event), cancel <-chan struct{}) error {
 	f.called, f.req = true, req
 	return f.restore(on, cancel)
 }
 
-func (f *fakeRunner) Flash(_ context.Context, req worker.Request, on func(worker.Event)) error {
+func (f *fakeRunner) Flash(_ context.Context, req device.Request, on func(device.Event)) error {
 	f.called = true
-	on(worker.Event{Type: "stage", Stage: "connecting"})
-	on(worker.Event{Type: "identified", Chip: "ESP32-C3", MAC: "aa:bb", Flash: "8MB"})
-	on(worker.Event{Type: "stage", Stage: "writing"})
-	on(worker.Event{Type: "progress", Percent: 50})
+	on(device.Event{Type: "stage", Stage: "connecting"})
+	on(device.Event{Type: "identified", Chip: "ESP32-C3", MAC: "aa:bb", Flash: "8MB"})
+	on(device.Event{Type: "stage", Stage: "writing"})
+	on(device.Event{Type: "progress", Percent: 50})
 	return f.err
 }
 
@@ -83,7 +83,7 @@ func TestChecksumFailureNeverTouchesDevice(t *testing.T) {
 }
 
 func TestWorkerErrorCodeIsKept(t *testing.T) {
-	r := &fakeRunner{err: &worker.CodedError{Code: "wrong_chip", Message: "Detected ESP32-S3"}}
+	r := &fakeRunner{err: &device.CodedError{Code: "wrong_chip", Message: "Detected ESP32-S3"}}
 	m := New(r)
 	p, sum, size := image(t)
 	_ = m.Start(Job{Slug: "x", Port: "/dev/cu.test", Image: p, SHA256: sum, Size: size})
@@ -96,12 +96,12 @@ func TestWorkerErrorCodeIsKept(t *testing.T) {
 }
 
 func TestRestoreReportsSessionAndCardID(t *testing.T) {
-	r := &fakeRunner{restore: func(on func(worker.Event), _ <-chan struct{}) error {
-		on(worker.Event{Type: "stage", Stage: "waiting"})
-		on(worker.Event{Type: "hint", Code: "replug"})
-		on(worker.Event{Type: "stage", Stage: "connecting"})
-		on(worker.Event{Type: "identified", Chip: "ESP32-C3", MAC: "aa:bb", Flash: "8MB"})
-		on(worker.Event{Type: "complete", MAC: "aa:bb", Session: "/backups/x", CardID: "keys"})
+	r := &fakeRunner{restore: func(on func(device.Event), _ <-chan struct{}) error {
+		on(device.Event{Type: "stage", Stage: "waiting"})
+		on(device.Event{Type: "hint", Code: "replug"})
+		on(device.Event{Type: "stage", Stage: "connecting"})
+		on(device.Event{Type: "identified", Chip: "ESP32-C3", MAC: "aa:bb", Flash: "8MB"})
+		on(device.Event{Type: "complete", MAC: "aa:bb", Session: "/backups/x", CardID: "keys"})
 		return nil
 	}}
 	m := New(r)
@@ -120,10 +120,10 @@ func TestRestoreReportsSessionAndCardID(t *testing.T) {
 func TestRestoreCancelOnlyBeforeWriting(t *testing.T) {
 	writing := make(chan struct{})
 	release := make(chan struct{})
-	r := &fakeRunner{restore: func(on func(worker.Event), cancel <-chan struct{}) error {
-		on(worker.Event{Type: "stage", Stage: "waiting"})
+	r := &fakeRunner{restore: func(on func(device.Event), cancel <-chan struct{}) error {
+		on(device.Event{Type: "stage", Stage: "waiting"})
 		<-cancel
-		return &worker.CodedError{Code: "cancelled", Message: "stopped"}
+		return &device.CodedError{Code: "cancelled", Message: "stopped"}
 	}}
 	m := New(r)
 	if err := m.StartRestore(RestoreJob{}); err != nil {
@@ -140,8 +140,8 @@ func TestRestoreCancelOnlyBeforeWriting(t *testing.T) {
 		t.Fatalf("unexpected state %+v", s)
 	}
 
-	r.restore = func(on func(worker.Event), cancel <-chan struct{}) error {
-		on(worker.Event{Type: "stage", Stage: "writing"})
+	r.restore = func(on func(device.Event), cancel <-chan struct{}) error {
+		on(device.Event{Type: "stage", Stage: "writing"})
 		close(writing)
 		<-release
 		return nil
@@ -163,9 +163,9 @@ func TestRestoreCancelOnlyBeforeWriting(t *testing.T) {
 }
 
 func TestBackupJobIsReadOnlyAndCancellable(t *testing.T) {
-	r := &fakeRunner{restore: func(on func(worker.Event), cancel <-chan struct{}) error {
-		on(worker.Event{Type: "stage", Stage: "backup"})
-		on(worker.Event{Type: "complete", MAC: "aa:bb", Session: "/b/s", File: "/b/s/full.bin", CardID: "keys"})
+	r := &fakeRunner{restore: func(on func(device.Event), cancel <-chan struct{}) error {
+		on(device.Event{Type: "stage", Stage: "backup"})
+		on(device.Event{Type: "complete", MAC: "aa:bb", Session: "/b/s", File: "/b/s/full.bin", CardID: "keys"})
 		return nil
 	}}
 	m := New(r)

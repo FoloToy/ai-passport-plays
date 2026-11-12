@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FoloToy/ai-passport-plays/internal/device"
 	"github.com/FoloToy/ai-passport-plays/internal/firmware"
-	"github.com/FoloToy/ai-passport-plays/internal/worker"
 )
 
 type State struct {
@@ -61,8 +61,8 @@ type RestoreJob struct {
 }
 
 type Runner interface {
-	Flash(ctx context.Context, req worker.Request, on func(worker.Event)) error
-	Restore(ctx context.Context, req worker.Request, on func(worker.Event), cancel <-chan struct{}) error
+	Flash(ctx context.Context, req device.Request, on func(device.Event)) error
+	Restore(ctx context.Context, req device.Request, on func(device.Event), cancel <-chan struct{}) error
 }
 
 type Manager struct {
@@ -135,8 +135,8 @@ func (m *Manager) StartRestore(job RestoreJob) error {
 	m.mu.Unlock()
 	go func() {
 		defer cancel()
-		err := m.runner.Restore(ctx, worker.Request{Command: command, FirmwareDir: job.FirmwareDir, BackupDir: job.BackupDir, FullBackup: job.FullBackup}, m.event, stop)
-		var ce *worker.CodedError
+		err := m.runner.Restore(ctx, device.Request{Command: command, FirmwareDir: job.FirmwareDir, BackupDir: job.BackupDir, FullBackup: job.FullBackup}, m.event, stop)
+		var ce *device.CodedError
 		if errors.As(err, &ce) && ce.Code == "cancelled" {
 			m.mu.Lock()
 			m.state.Active, m.state.Stage, m.state.Cancelling, m.state.EndedAt = false, "cancelled", false, time.Now()
@@ -179,14 +179,14 @@ func (m *Manager) run(ctx context.Context, job Job) {
 		m.fail(code, err)
 		return
 	}
-	err := m.runner.Flash(ctx, worker.Request{Port: job.Port, Image: job.Image, SHA256: job.SHA256, Size: job.Size, Baud: job.Baud, BackupDir: job.BackupDir}, m.event)
+	err := m.runner.Flash(ctx, device.Request{Port: job.Port, Image: job.Image, SHA256: job.SHA256, Size: job.Size, Baud: job.Baud, BackupDir: job.BackupDir}, m.event)
 	m.finish(err)
 }
 
 func (m *Manager) finish(err error) {
 	if err != nil {
 		code := "other"
-		var ce *worker.CodedError
+		var ce *device.CodedError
 		if errors.As(err, &ce) && ce.Code != "" {
 			code = ce.Code
 		}
@@ -204,7 +204,7 @@ func (m *Manager) fail(code string, err error) {
 	m.state.Active, m.state.Stage, m.state.ErrorCode, m.state.Error, m.state.EndedAt = false, "failed", code, err.Error(), time.Now()
 }
 
-func (m *Manager) event(ev worker.Event) {
+func (m *Manager) event(ev device.Event) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	switch ev.Type {

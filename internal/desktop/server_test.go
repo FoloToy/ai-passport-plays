@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FoloToy/ai-passport-plays/internal/device"
 	"github.com/FoloToy/ai-passport-plays/internal/factory"
 	"github.com/FoloToy/ai-passport-plays/internal/flasher"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
 	"github.com/FoloToy/ai-passport-plays/internal/syncer"
-	"github.com/FoloToy/ai-passport-plays/internal/worker"
 )
 
 func newServer(t *testing.T) (*Server, string) {
@@ -27,7 +28,13 @@ func newServer(t *testing.T) (*Server, string) {
 		t.Fatal(err)
 	}
 	sm := syncer.New(syncer.NewClient("http://127.0.0.1:1", "test"))
-	return New("test", st, sm, flasher.New(worker.Runner{}), worker.Runner{}), lib
+	// No device is ever found, so device jobs fail quickly on their own.
+	r := device.Runner{
+		List:        func() ([]device.Candidate, error) { return nil, nil },
+		Connect:     func(string, string, int, func(string)) (device.Device, error) { return nil, errors.New("no device") },
+		WaitTimeout: 50 * time.Millisecond,
+	}
+	return New("test", st, sm, flasher.New(r), r), lib
 }
 
 func do(s *Server, method, path, token, body string) *httptest.ResponseRecorder {
@@ -135,7 +142,7 @@ func TestRestoreUnpacksFirmwareAndRunsOneJob(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(s.StateDir, "factory-firmware", factory.Version, "trae_card.bin")); err != nil {
 		t.Fatal("factory firmware was not unpacked:", err)
 	}
-	// The test server has no worker, so the job fails on its own; it must report a restore.
+	// The test runner never finds a device, so the job fails on its own; it must report a restore.
 	deadline := time.Now().Add(3 * time.Second)
 	for s.Flash.Active() && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)

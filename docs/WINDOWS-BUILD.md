@@ -19,7 +19,7 @@
 | `*.sha256` | 校验和 |
 | `AI Passport Plays\` | 打包用的临时目录（不需要上传） |
 
-安装后的结构：`AIPassportPlays.exe`，旁边是 `worker\ai-passport-plays-worker.exe`（PyInstaller 打包的 esptool 刷机程序）、`runtime\MicrosoftEdgeWebview2Setup.exe`、`ThirdParty\`。
+安装后的结构：`AIPassportPlays.exe`（刷机功能已经内置，用 Go 实现，不再有单独的刷机程序），旁边是 `runtime\MicrosoftEdgeWebview2Setup.exe`、`ThirdParty\`。
 
 ## 步骤
 
@@ -41,13 +41,12 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload
 
 `scripts\build-on-windows.ps1` 会做这些事：
 
-1. 用 winget 安装缺少的工具：Git、Go、Python 3.12、Inno Setup 6（如果带了 `-Upload`，还会装 GitHub CLI）。
-2. 设置国内可用的镜像：`GOPROXY=https://goproxy.cn,...`；如果 pypi.org 连不上，就改用清华 PyPI 镜像。
+1. 用 winget 安装缺少的工具：Git、Go、Inno Setup 6（如果带了 `-Upload`，还会装 GitHub CLI）。不需要 Python。
+2. 设置国内可用的镜像：`GOPROXY=https://goproxy.cn,...`。
 3. 运行 `scripts\package-windows.ps1`，依次执行：
-   - 创建 Python 虚拟环境，跑刷机程序的单元测试，用 PyInstaller 打包刷机程序。
    - `go test ./...`，然后 `go build -H windowsgui`。Go 版本由 `GOTOOLCHAIN=go1.26.0` 自动下载。
    - 下载微软官方的 WebView2 安装程序，并校验它的签名。
-   - 自检打包好的刷机程序：`version`、`self-test`（ESP32-C3 stub）、`ports`。
+   - 自检打包好的程序：`AIPassportPlays.exe -self-test`（检查内置的 ESP32-C3 flasher stub 和出厂固件）。
    - 生成 ZIP，用 Inno Setup 生成 Setup.exe，写入 sha256。
 4. 带 `-Upload` 时，执行 `gh release upload v0.3.0 ... --clobber`。
 
@@ -75,10 +74,9 @@ powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1
 | `winget` 不存在 | 在 Microsoft Store 安装"应用安装程序"（App Installer） |
 | 刚装完工具，提示命令找不到 | 关掉 PowerShell 重新打开，再运行一次脚本 |
 | `go: downloading go1.26.0` 很慢或失败 | 确认 `GOPROXY` 是 goproxy.cn；也可以直接装 Go 1.26 并设置 `GOTOOLCHAIN=local` |
-| pip 安装慢 | `$env:PIP_INDEX_URL='https://pypi.tuna.tsinghua.edu.cn/simple'` 后重试 |
 | `Commit the source tree before packaging` | 工作区有改动。提交后再打包，或者加 `-AllowDirty` |
 | 某个 Go 测试只在 Windows 上失败 | 多半是路径或文件占用的问题，修好后提交；不要跳过测试直接发布 |
-| PyInstaller 打出的程序被杀毒软件拦截 | 把仓库目录加入 Windows 安全中心的排除项 |
+| 打出的程序被杀毒软件拦截 | 把仓库目录加入 Windows 安全中心的排除项 |
 | 安装包没有签名 | 预期内。运行时 SmartScreen 会提示，点"更多信息 → 仍要运行" |
 
 ## 相关文件
@@ -92,5 +90,4 @@ powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1
     --product-name "AI Passport 玩法社区" --file-description "AI Passport 玩法社区" --copyright FoloToy \
     --product-version 0.3.0.0 --file-version 0.3.0.0 --original-filename AIPassportPlays.exe --arch amd64,arm64
   ```
-- `worker/requirements-windows.lock`：Windows 上 PyInstaller 额外需要的依赖
 - 改了版本号时：同时改 `VERSION` 和上面 go-winres 命令里的版本号

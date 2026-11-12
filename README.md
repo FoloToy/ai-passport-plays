@@ -54,7 +54,7 @@ The offline desktop edition of the AI Passport App Library. It downloads every p
 
 备份默认保存在 `~/Documents/FoloToy恢复出厂备份/`（与原工具相同，可在恢复出厂页更改），每次恢复一个子目录 `<时间>-<MAC>/`，里面有日志和恢复报告。
 
-更新出厂固件时：替换 `internal/factory/firmware/` 里的文件，同时更新 `internal/factory/factory.go` 和 `worker/restore.py` 里的大小、SHA-256 和版本号（两边有测试互相核对），再用真机验证。
+更新出厂固件时：替换 `internal/factory/firmware/` 里的文件，同时更新 `internal/factory/factory.go` 里的大小、SHA-256 和版本号，再用真机验证。
 
 > **刷入玩法和身份区**：社区玩法是从 `0x0` 写入的合并镜像。超过 `0x356000`（约 3.3 MB）的镜像会覆盖身份区。刷入这类玩法前，App 会先把设备当前的身份区备份到 `<备份目录>/cardid/<MAC>/`，覆盖了有内容的身份区时会在刷机结果里提示。
 
@@ -77,7 +77,8 @@ avatars/<name>.webp        作者头像
 沿用 [Magic-Flash](https://github.com/FoloToy/Magic-Flash) 的结构：
 
 - **Go + Wails v3** 桌面外壳。界面是打包进程序的原生 HTML/CSS/JS（`frontend/`），作为 Wails 的资源处理器提供，**不监听任何网络端口**。
-- **Python esptool 刷机程序**（`worker/main.py`，恢复出厂在 `worker/restore.py`），用 PyInstaller 打包进 App。它是独立进程，和 Go 之间用 JSON lines 通信，用户不需要安装 Python。
+- `internal/esp`：用 Go 实现的 ESP32-C3 串口刷机协议（ROM 引导程序握手、上传 flasher stub、压缩写入、读取、MD5 校验、复位），参照 esptool 的协议。内置的 flasher stub 来自 esp-flasher-stub（Apache-2.0 / MIT）。不需要 Python 或 esptool。
+- `internal/device`：在 App 进程里运行的设备任务：刷入玩法、恢复出厂、固件备份、自动抓取设备（含 Windows Code 43 处理）。
 - `internal/syncer`：社区接口、两阶段下载、限流退避、目录迁移。
 - `internal/firmware`：ESP32-C3 镜像头、大小、SHA-256 校验。
 - `internal/flasher`：单台设备任务（刷入玩法或恢复出厂）和进度，同一时间只运行一个。
@@ -86,24 +87,36 @@ avatars/<name>.webp        作者头像
 
 ## 开发
 
-需要 Go 1.26、Python 3.12+ 和 Xcode 命令行工具。
+需要 Go 1.26 和 Xcode 命令行工具。
 
 ```sh
 export GOTOOLCHAIN=go1.26.0
 go test -race ./...
 
-python3.12 -m venv .runtime/worker-venv
-.runtime/worker-venv/bin/pip install -r worker/requirements.lock
-.runtime/worker-venv/bin/python -m unittest discover -s worker -p 'test_*.py'
-
 # 在浏览器里调试界面（只监听 127.0.0.1）
-go run . -headless -listen 127.0.0.1:47811 \
-  -worker .runtime/worker-venv/bin/python -worker-script worker/main.py \
-  -state-dir /tmp/plays-state
+go run . -headless -listen 127.0.0.1:47811 -state-dir /tmp/plays-state
 
 # 直接运行桌面窗口
-go run . -worker .runtime/worker-venv/bin/python -worker-script worker/main.py
+go run .
+
+# 检查内置 flasher stub 和出厂固件
+go run . -self-test
 ```
+
+### 用 QEMU 测试刷机协议
+
+不接真机时，可以用 Espressif 的 QEMU（`esp-develop-9.2.2`，riscv32）模拟一台 8 MB 的 ESP32-C3，停在下载模式：
+
+```sh
+qemu-system-riscv32 -nographic -machine esp32c3 \
+  -drive file=flash.bin,if=mtd,format=raw \
+  -global driver=esp32c3.gpio,property=strap_mode,value=0x02 \
+  -serial tcp:127.0.0.1:5555,server,nowait
+
+ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./internal/esp/ ./internal/device/
+```
+
+`flash.bin` 必须正好 2/4/8/16 MB。`internal/device` 的 QEMU 测试会做一次完整的恢复出厂（含 8 MB 全量备份）和一次固件备份。
 
 ## 打包（macOS）
 
@@ -118,7 +131,7 @@ ALLOW_DIRTY=1 scripts/package-mac.sh   # 有未提交改动时也打包
 
 ## 打包（Windows）
 
-在 Windows 10/11 x64 上运行：
+在 Windows 10/11 x64 上运行（桌面 App 只支持 Windows 10 及以上；Windows 7/8 用户请看 [docs/WINDOWS-7.md](docs/WINDOWS-7.md)，用 Chrome 109 网页版刷机并手动装驱动）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1          # 安装依赖并打包
@@ -129,4 +142,4 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload  #
 
 ## 许可证
 
-见 [THIRD_PARTY.md](THIRD_PARTY.md)。刷机程序 `worker/main.py` 使用 GPL-2.0-or-later（与 esptool 相同）。
+见 [THIRD_PARTY.md](THIRD_PARTY.md)。

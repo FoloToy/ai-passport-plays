@@ -14,17 +14,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.26.0'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Go tests
         run: go test -race ./...
       - name: Windows cross-compile
         run: GOOS=windows GOARCH=amd64 go build -o /dev/null .
-      - name: Worker tests
-        run: |
-          python -m pip install -r worker/requirements.lock
-          python -m unittest discover -s worker -p 'test_*.py'
 
   package:
     needs: test
@@ -39,12 +32,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.26.0'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Package
-        env:
-          PLAYS_PYTHON: python
         run: scripts/package-mac.sh
       - uses: actions/upload-artifact@v4
         with:
