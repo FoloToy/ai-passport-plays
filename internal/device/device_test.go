@@ -33,6 +33,7 @@ type fakeDevice struct {
 	writes   [][]int
 	onWrite  func(*fakeDevice)
 	md5      func(offset, size int) string
+	resetErr error
 }
 
 func newFake() *fakeDevice {
@@ -80,7 +81,7 @@ func (d *fakeDevice) MD5(offset, size int) (string, error) {
 	sum := md5.Sum(d.flash[offset : offset+size])
 	return hex.EncodeToString(sum[:]), nil
 }
-func (d *fakeDevice) Reset() error { d.calls = append(d.calls, "reset"); return nil }
+func (d *fakeDevice) Reset() error { d.calls = append(d.calls, "reset"); return d.resetErr }
 func (d *fakeDevice) Close() error { return nil }
 
 func codeOf(err error) string {
@@ -586,5 +587,61 @@ func TestRunnerRestoreDeliversCancel(t *testing.T) {
 	}, cancel)
 	if codeOf(err) != "cancelled" {
 		t.Fatalf("want cancelled, got %v", err)
+	}
+}
+
+func TestRestartIsReported(t *testing.T) {
+	for _, stuck := range []bool{false, true} {
+		d := newFake()
+		if stuck {
+			d.resetErr = ErrNotRestarted
+		}
+		events, err := flashWith(t, d, playImage(4096), "")
+		if err != nil {
+			t.Fatal(err) // a missed restart never fails a verified install
+		}
+		if last := events[len(events)-1]; last.Type != "complete" || last.Restarted == stuck {
+			t.Fatalf("stuck=%v: complete %+v", stuck, last)
+		}
+		d = newFake()
+		if stuck {
+			d.resetErr = ErrNotRestarted
+		}
+		j, _ := newJob(t, d, "restore", nil)
+		res, err := j.run()
+		if err != nil || res.Restarted == stuck {
+			t.Fatalf("stuck=%v: restore %+v %v", stuck, res, err)
+		}
+	}
+}
+
+func TestFlashRefusesMissingPort(t *testing.T) {
+	connected := false
+	r := Runner{
+		List:    func() ([]Candidate, error) { return []Candidate{cand("/dev/cu.other", "")}, nil },
+		Connect: func(string, string, int, func(string)) (Device, error) { connected = true; return newFake(), nil },
+	}
+	err := r.Flash(t.Context(), Request{Port: "/dev/cu.gone"}, func(Event) {})
+	if codeOf(err) != "no_device" || connected {
+		t.Fatalf("want no_device without connecting, got %v", err)
+	}
+}
+
+func TestWaitingSaysWhenNothingWasEverSeen(t *testing.T) {
+	oldEvery, oldAfter := noticeEvery, notSeenAfter
+	noticeEvery, notSeenAfter = 10*time.Millisecond, 30*time.Millisecond
+	defer func() { noticeEvery, notSeenAfter = oldEvery, oldAfter }()
+	j, _ := autoJob(t, func() []Candidate { return nil }, func(Candidate) bool { return true }, nil, 150*time.Millisecond)
+	var codes []string
+	j.emit = func(e Event) {
+		if e.Type == "hint" {
+			codes = append(codes, e.Code)
+		}
+	}
+	if _, err := j.autoConnect(); codeOf(err) != "not_found" {
+		t.Fatalf("want not_found, got %v", err)
+	}
+	if len(codes) == 0 || codes[0] != "replug" || codes[len(codes)-1] != "not_seen" {
+		t.Fatalf("hints %v", codes)
 	}
 }

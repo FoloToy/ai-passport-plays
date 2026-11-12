@@ -149,10 +149,11 @@ func flashImage(ctx context.Context, connect Connector, req Request, on func(Eve
 	}
 	on(Event{Type: "progress", Percent: 100})
 	on(Event{Type: "stage", Stage: "resetting"})
-	if err = d.Reset(); err != nil {
-		log(fmt.Sprintf("Automatic reset failed (%v); unplug and replug the device", err))
+	restarted := d.Reset() == nil
+	if !restarted {
+		log("The device did not restart by itself; unplug and replug USB")
 	}
-	on(Event{Type: "complete", MAC: mac})
+	on(Event{Type: "complete", MAC: mac, Restarted: restarted})
 	return nil
 }
 

@@ -14,6 +14,10 @@ import (
 )
 
 const (
+	// restartSettle and restartWait bound the check that the chip left download mode.
+	restartSettle = 1500 * time.Millisecond
+	restartWait   = 5 * time.Second
+
 	EspressifVID = 0x303A
 	USBJTAGPID   = 0x1001
 )
@@ -113,10 +117,14 @@ func ConnectSerial(path, mode string, attempts int, log func(string)) (Device, e
 		_ = l.Close()
 		return nil, err
 	}
-	return &serialDevice{l: l}, nil
+	return &serialDevice{l: l, path: path}, nil
 }
 
-type serialDevice struct{ l *esp.Loader }
+type serialDevice struct {
+	l      *esp.Loader
+	path   string
+	closed bool
+}
 
 func (d *serialDevice) Chip() (string, error) { return d.l.Chip() }
 func (d *serialDevice) MAC() (string, error)  { return d.l.MAC() }
@@ -158,8 +166,72 @@ func (d *serialDevice) Write(segs []esp.Segment, progress func(int, int)) error 
 }
 
 func (d *serialDevice) MD5(offset, size int) (string, error) { return d.l.FlashMD5(offset, size) }
-func (d *serialDevice) Reset() error                         { d.l.HardReset(); return nil }
-func (d *serialDevice) Close() error                         { return d.l.Close() }
+func (d *serialDevice) Close() error {
+	if d.closed {
+		return nil
+	}
+	d.closed = true
+	return d.l.Close()
+}
+
+func (d *serialDevice) log(msg string) {
+	if d.l.Log != nil {
+		d.l.Log(msg)
+	}
+}
+
+// Reset pulses EN like esptool, then checks the chip really left download mode: the
+// ROM bootloader always keeps the USB port up and answers SYNC, an application does
+// not. If the ROM still answers, a watchdog reset is tried once.
+func (d *serialDevice) Reset() error {
+	d.l.HardReset()
+	_ = d.Close()
+	if d.path == "" {
+		return nil
+	}
+	for attempt := 1; ; attempt++ {
+		l := d.romStillThere()
+		if l == nil {
+			d.log("Device restarted")
+			return nil
+		}
+		if attempt == 2 {
+			_ = l.Close()
+			d.log("The device is still in download mode after two resets")
+			return ErrNotRestarted
+		}
+		d.log("Still in download mode; restarting with the watchdog")
+		if err := l.WatchdogReset(); err != nil {
+			l.HardReset()
+		}
+		_ = l.Close()
+	}
+}
+
+// romStillThere waits for the port to settle after a reset and returns an open loader
+// when the ROM bootloader answers on it, or nil when it does not.
+func (d *serialDevice) romStillThere() *esp.Loader {
+	time.Sleep(restartSettle)
+	var port esp.Port
+	var err error
+	deadline := time.Now().Add(restartWait)
+	for {
+		if port, err = esp.OpenSerial(d.path, 115200); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			return nil // the port is gone: the ROM would have kept it, so the app runs
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	l := esp.New(port)
+	l.USB = d.l.USB
+	if l.Connect(nil, 2) != nil {
+		_ = l.Close()
+		return nil
+	}
+	return l
+}
 
 func orUnknown(s string) string {
 	if s == "" {

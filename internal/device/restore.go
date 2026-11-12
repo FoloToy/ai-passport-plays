@@ -74,6 +74,7 @@ func loadFactory(dir string) ([]esp.Segment, error) {
 
 type restoreResult struct {
 	MAC, Session, CardID, File string
+	Restarted                  bool
 }
 
 type restoreJob struct {
@@ -349,11 +350,12 @@ func (j *restoreJob) restore(d Device, segs []esp.Segment) (restoreResult, error
 	_ = os.WriteFile(filepath.Join(session, "factory-restore-report.txt"), []byte(strings.Join(report, "\n")+"\n"), 0o644)
 
 	j.stage("resetting")
-	if err = d.Reset(); err != nil {
-		j.log("Firmware verified, but the automatic reset failed (%v); unplug and replug the device", err)
+	restarted := d.Reset() == nil
+	if !restarted {
+		j.log("Firmware verified, but the device did not restart by itself; unplug and replug USB")
 	}
 	j.log("Factory restore finished: firmware verified, cardid unchanged")
-	return restoreResult{MAC: mac, Session: session, CardID: status}, nil
+	return restoreResult{MAC: mac, Session: session, CardID: status, Restarted: restarted}, nil
 }
 
 // backup saves the device's whole flash, checked against an MD5 computed on the device.
@@ -440,10 +442,11 @@ func (j *restoreJob) backup(d Device) (restoreResult, error) {
 	j.log("Backup saved and checked against the device: %s", path)
 
 	j.stage("resetting")
-	if err = d.Reset(); err != nil {
-		j.log("Backup finished, but the automatic reset failed (%v); unplug and replug the device", err)
+	restarted := d.Reset() == nil
+	if !restarted {
+		j.log("Backup finished, but the device did not restart by itself; unplug and replug USB")
 	}
-	return restoreResult{MAC: mac, Session: session, CardID: cardid, File: path}, nil
+	return restoreResult{MAC: mac, Session: session, CardID: cardid, File: path, Restarted: restarted}, nil
 }
 
 // readTo reads a flash range and saves it to path.

@@ -57,6 +57,7 @@ const (
 	cryptCntMask      = 0x7 << 18
 	rtcWDTProtect     = 0x600080A8
 	rtcWDTConfig0     = 0x60008090
+	rtcWDTConfig1     = 0x60008094
 	rtcWDTKey         = 0x50D83AA1
 	rtcSWDProtect     = 0x600080B0
 	rtcSWDConf        = 0x600080AC
@@ -665,3 +666,21 @@ func (l *Loader) ReadFlash(offset, size int, progress func(done, total int)) ([]
 
 // HardReset restarts the chip into its application.
 func (l *Loader) HardReset() { HardReset(l.port, l.USB) }
+
+// WatchdogReset restarts the chip with the RTC watchdog (a full system reset, as
+// esptool's watchdog-reset). It is the fallback when pulsing RTS did not restart it.
+func (l *Loader) WatchdogReset() error {
+	steps := []struct{ addr, val uint32 }{
+		{rtcWDTProtect, rtcWDTKey},
+		{rtcWDTConfig1, 2000},
+		{rtcWDTConfig0, 1<<31 | 5<<28 | 1<<8 | 2},
+		{rtcWDTProtect, 0},
+	}
+	for _, s := range steps {
+		if err := l.WriteReg(s.addr, s.val); err != nil {
+			return err
+		}
+	}
+	time.Sleep(500 * time.Millisecond)
+	return nil
+}

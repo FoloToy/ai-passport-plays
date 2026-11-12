@@ -5,7 +5,9 @@ package device
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -55,6 +57,8 @@ type Event struct {
 	CardID    string `json:"cardid,omitempty"`
 	Status    string `json:"status,omitempty"`
 	Overwrite bool   `json:"overwrite,omitempty"`
+	// Restarted is set on complete when the device was confirmed to have left download mode.
+	Restarted bool `json:"restarted,omitempty"`
 }
 
 // CodedError carries a stable code the UI translates.
@@ -64,6 +68,9 @@ type CodedError struct {
 }
 
 func (e *CodedError) Error() string { return e.Message }
+
+// ErrNotRestarted means the device is still in download mode after the automatic reset.
+var ErrNotRestarted = errors.New("the device did not restart by itself; unplug and replug USB")
 
 func coded(code, format string, args ...any) *CodedError {
 	return &CodedError{Code: code, Message: fmt.Sprintf(format, args...)}
@@ -81,6 +88,8 @@ type Device interface {
 	// Write writes and MD5-checks each segment; flash mode and size bytes are kept.
 	Write(segs []esp.Segment, progress func(done, total int)) error
 	MD5(offset, size int) (string, error)
+	// Reset restarts the chip into its application and closes the connection. It
+	// returns ErrNotRestarted when the chip is still in download mode afterwards.
 	Reset() error
 	Close() error
 }
@@ -138,6 +147,9 @@ func (r Runner) Ports(ctx context.Context) ([]Port, error) {
 
 // Flash installs one play image at 0x0.
 func (r Runner) Flash(ctx context.Context, req Request, on func(Event)) error {
+	if !r.portPresent(req.Port) {
+		return coded("no_device", "No device on %s. Plug in the AI Passport, refresh the list and choose it again.", req.Port)
+	}
 	return guard(func() error { return flashImage(ctx, r.connector(), req, on) })
 }
 
@@ -161,7 +173,7 @@ func (r Runner) Restore(ctx context.Context, req Request, on func(Event), cancel
 		if err != nil {
 			return err
 		}
-		on(Event{Type: "complete", MAC: res.MAC, Session: res.Session, CardID: res.CardID, File: res.File})
+		on(Event{Type: "complete", MAC: res.MAC, Session: res.Session, CardID: res.CardID, File: res.File, Restarted: res.Restarted})
 		return nil
 	})
 }
@@ -206,4 +218,22 @@ func percent(on func(Event)) func(done, total int) {
 			on(Event{Type: "progress", Percent: p})
 		}
 	}
+}
+
+// portPresent reports whether path is still a serial port. Unknown (listing failed or a
+// Windows port that does not enumerate) counts as present so the connect can decide.
+func (r Runner) portPresent(path string) bool {
+	if path == "" {
+		return false
+	}
+	found, err := r.lister()()
+	if err != nil {
+		return true
+	}
+	for _, c := range found {
+		if strings.EqualFold(c.Device, path) {
+			return true
+		}
+	}
+	return runtime.GOOS == "windows" && len(problemPortHints()) > 0
 }

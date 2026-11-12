@@ -43,12 +43,16 @@ const I18N = {
     move_title: '迁移玩法目录', moving_pill: '迁移中',
     // flash
     flash_title: '刷入设备', step_connect: '用 USB 数据线把 AI Passport 连接到电脑，然后选择设备。',
-    searching: '正在查找设备…', no_ports: '没有找到设备。请确认数据线支持传输数据，并重新插拔设备。',
+    searching: '正在查找设备…', no_ports: '没有找到设备。请检查：① 设备已用 USB 线连到电脑；② 数据线能传数据（有些线只能充电）；③ 换一个 USB 口；④ 仍然没有时，按住 BOOT 键再插入 USB。列表会自动刷新。',
+    no_passport: '没有找到 AI Passport，下面只有其他串口设备。请插好 AI Passport，列表会自动刷新；不确定时不要选其他设备。',
+    r_not_seen: '还没有发现任何 AI Passport。请检查数据线能传数据、换一个 USB 口，或按住 BOOT 键再插入 USB。',
+    r_waited: (s, max) => `已等待 ${s} 秒（最多 ${max} 秒）`,
+    err_no_device: '没有找到设备：所选的串口已经不在了。请插好设备，点"刷新"后重新选择。',
     port_recommended: 'AI Passport', refresh: '刷新', start_flash: '开始刷入', cancel: '取消',
     flash_warn: '刷入过程中请勿拔出设备或关闭本程序。',
     stage_checking: '正在校验固件', stage_connecting: '正在连接设备', stage_writing: '正在写入固件',
     stage_verifying: '正在校验写入结果', stage_resetting: '正在重启设备',
-    flash_done: '刷入完成', flash_done_sub: '设备会自动重启并进入新玩法。', flash_failed: '刷入失败',
+    flash_done: '刷入完成', flash_done_sub: '设备已自动重启，正在进入新玩法。', flash_done_replug: '设备没有自动重启，请拔插一次 USB。', flash_failed: '刷入失败',
     retry: '重试', done: '完成', log: '详细日志', chip: '芯片', mac: 'MAC', flash_size: 'Flash',
     // settings
     settings_title: '设置', s_library: '玩法存储目录', s_library_sub: '玩法、图片和固件都保存在这里。',
@@ -91,7 +95,7 @@ const I18N = {
     r_writing: '正在写入出厂固件', r_writing_sub: '请勿拔线或关闭本程序',
     r_verifying: '正在校验恢复结果', r_verifying_sub: '马上就好，请勿拔线',
     r_resetting: '正在重启设备', r_resetting_sub: '马上就好',
-    r_done: '恢复出厂成功', r_done_sub: '设备会自动重启。如果没有反应，拔插一次 USB 即可。',
+    r_done: '恢复出厂成功', r_done_sub: '设备已自动重启。', r_done_replug: '设备没有自动重启，请拔插一次 USB。',
     r_failed: '没有恢复成功', r_failed_sub: '拔插设备后可以再试一次。',
     r_cancelled: '已停止', r_cancelled_sub: '没有写入任何内容。',
     r_busy_flash: '正在刷入玩法，完成后才能恢复出厂。',
@@ -139,12 +143,16 @@ const I18N = {
     banner_incomplete: 'The last update did not finish; some apps cannot be installed yet.', banner_update: n => `${n} new or updated apps are available.`,
     move_title: 'Move library', moving_pill: 'Moving',
     flash_title: 'Install to device', step_connect: 'Connect your AI Passport with a USB data cable, then pick the device.',
-    searching: 'Looking for devices…', no_ports: 'No device found. Make sure the cable carries data, then reconnect the device.',
+    searching: 'Looking for devices…', no_ports: 'No device found. Check that: ① the device is connected by USB; ② the cable carries data (some only charge); ③ another USB port helps; ④ if not, hold BOOT while plugging in USB. The list refreshes by itself.',
+    no_passport: 'No AI Passport found; only other serial devices are listed. Plug in the AI Passport and the list refreshes by itself. Do not pick another device unless you are sure.',
+    r_not_seen: 'No AI Passport has appeared yet. Check that the cable carries data, try another USB port, or hold BOOT while plugging in USB.',
+    r_waited: (s, max) => `Waited ${s} s (up to ${max} s)`,
+    err_no_device: 'Device not found: the selected port is gone. Plug in the device, click Refresh and choose it again.',
     port_recommended: 'AI Passport', refresh: 'Refresh', start_flash: 'Install', cancel: 'Cancel',
     flash_warn: 'Do not unplug the device or quit the app while installing.',
     stage_checking: 'Checking firmware', stage_connecting: 'Connecting to the device', stage_writing: 'Writing firmware',
     stage_verifying: 'Verifying', stage_resetting: 'Restarting the device',
-    flash_done: 'Installed', flash_done_sub: 'The device restarts into the new app.', flash_failed: 'Install failed',
+    flash_done: 'Installed', flash_done_sub: 'The device has restarted into the new app.', flash_done_replug: 'The device did not restart by itself. Unplug and replug USB once.', flash_failed: 'Install failed',
     retry: 'Retry', done: 'Done', log: 'Details', chip: 'Chip', mac: 'MAC', flash_size: 'Flash',
     settings_title: 'Settings', s_library: 'Library folder', s_library_sub: 'Apps, images and firmware are stored here.',
     change_dir: 'Change folder', reveal: 'Show in Finder', reveal_win: 'Show in Explorer', usage: 'Used', files: 'Files', free: 'Free space',
@@ -185,7 +193,7 @@ const I18N = {
     r_writing: 'Writing factory firmware', r_writing_sub: 'Do not unplug or close the app',
     r_verifying: 'Verifying', r_verifying_sub: 'Almost done; do not unplug',
     r_resetting: 'Restarting the device', r_resetting_sub: 'Almost done',
-    r_done: 'Factory firmware restored', r_done_sub: 'The device restarts by itself. If it does not, unplug and replug USB.',
+    r_done: 'Factory firmware restored', r_done_sub: 'The device has restarted.', r_done_replug: 'The device did not restart by itself. Unplug and replug USB once.',
     r_failed: 'The restore did not finish', r_failed_sub: 'Replug the device and try again.',
     r_cancelled: 'Stopped', r_cancelled_sub: 'Nothing was written.',
     r_busy_flash: 'An app is being installed. Wait for it to finish first.',
@@ -745,7 +753,7 @@ function flashBody() {
     let list;
     if (ports === null) list = `<div class="searching"><span class="spinner"></span>${t('searching')}</div>`;
     else if (!ports.length) list = `<div class="searching">${t('no_ports')}</div>`;
-    else list = ports.map(pt => `<label class="port ${S.flash.port === pt.path ? 'selected' : ''}"><input type="radio" name="port" value="${esc(pt.path)}" ${S.flash.port === pt.path ? 'checked' : ''} data-action="pick-port"><span><b>${esc(pt.recommended ? t('port_recommended') : pt.label)}</b><small>${esc(pt.path)} · ${pt.vid.toString(16).padStart(4, '0')}:${pt.pid.toString(16).padStart(4, '0')}</small></span>${pt.recommended ? `<span class="chip">ESP32-C3</span>` : '<span></span>'}</label>`).join('');
+    else list = (ports.some(pt => pt.recommended) ? '' : `<div class="notice">${t('no_passport')}</div>`) + ports.map(pt => `<label class="port ${S.flash.port === pt.path ? 'selected' : ''}"><input type="radio" name="port" value="${esc(pt.path)}" ${S.flash.port === pt.path ? 'checked' : ''} data-action="pick-port"><span><b>${esc(pt.recommended ? t('port_recommended') : pt.label)}</b><small>${esc(pt.path)} · ${pt.vid.toString(16).padStart(4, '0')}:${pt.pid.toString(16).padStart(4, '0')}</small></span>${pt.recommended ? `<span class="chip">ESP32-C3</span>` : '<span></span>'}</label>`).join('');
     return `<div class="steps"><span class="on"></span><span></span><span></span></div>
       <p class="m-title"><b>${title}</b></p>
       <p class="m-sub">${t('step_connect')}</p>
@@ -757,7 +765,7 @@ function flashBody() {
   const info = f.chip ? `<dl class="kv"><dt>${t('chip')}</dt><dd>${esc(f.chip)}</dd><dt>${t('mac')}</dt><dd>${esc(f.mac)}</dd><dt>${t('flash_size')}</dt><dd>${esc(f.flash)}</dd></dl>` : '';
   if (f.stage === 'done') {
     return `<div class="steps"><span class="on"></span><span class="on"></span><span class="on"></span></div>
-      <div class="result"><div class="icon">✓</div><h3>${t('flash_done')}</h3><p>${title} · ${t('flash_done_sub')}</p></div>${info}${cardidNote(f)}${logs}
+      <div class="result"><div class="icon">✓</div><h3>${t('flash_done')}</h3><p>${title} · ${t(f.restarted ? 'flash_done_sub' : 'flash_done_replug')}</p></div>${f.restarted ? '' : `<div class="notice">${t('flash_done_replug')}</div>`}${info}${cardidNote(f)}${logs}
       <div class="modal-foot inline"><button class="btn primary" data-action="close-modal">${t('done')}</button></div>`;
   }
   if (f.stage === 'failed') {
@@ -831,7 +839,7 @@ function restoreMain() {
     let id = '';
     if (f.cardid === 'blank_ff' || f.cardid === 'blank_00') id = `<div class="notice">${t('r_blank_id')}</div>`;
     else if (f.cardid && f.cardid !== 'keys') id = `<div class="notice">${t('r_unknown_id')}</div>`;
-    return `<div class="result"><div class="icon">✓</div><h3>${t('r_done')}</h3><p>${t('r_done_sub')}</p></div>${info}<div class="sp12"></div>${id}
+    return `<div class="result"><div class="icon">✓</div><h3>${t('r_done')}</h3><p>${t(f.restarted ? 'r_done_sub' : 'r_done_replug')}</p></div>${f.restarted ? '' : `<div class="notice">${t('r_done_replug')}</div>`}${info}<div class="sp12"></div>${id}
       <div class="buttons"><button class="btn" data-action="reveal-session">${t('open_backup')}</button><button class="btn ghost" data-action="restore-reset">${t('restore_again')}</button></div>${logs}`;
   }
   if (f.stage === 'failed') {
@@ -859,7 +867,8 @@ function runningBody(f, kind, steps) {
   let key = f.stage === 'checking' ? 'connecting' : f.stage === 'cardid' ? 'verifying' : f.stage;
   if (!I18N.zh['r_' + key]) key = 'preparing';
   let sub = label(key + '_sub');
-  if (f.stage === 'waiting') sub = f.hint === 'multiple' ? t('r_multiple') : f.hint === 'code43' ? t('r_code43', f.port || 'COM') : t('r_replug');
+  if (f.stage === 'waiting') sub = f.hint === 'multiple' ? t('r_multiple') : f.hint === 'code43' ? t('r_code43', f.port || 'COM') : f.hint === 'not_seen' ? t('r_not_seen') : t('r_replug');
+  const waited = f.stage === 'waiting' && f.startedAt ? `<p class="m-sub">${t('r_waited', Math.max(0, Math.round((Date.now() - Date.parse(f.startedAt)) / 1000)), 150)}</p>` : '';
   const idx = Math.max(0, RESTORE_STAGES.indexOf(f.stage));
   const measured = f.stage === 'backup' || (kind === 'restore' && ['writing', 'verifying'].includes(f.stage));
   const bar = f.stage === 'waiting' || (kind === 'backup' && f.stage === 'verifying')
@@ -867,7 +876,7 @@ function runningBody(f, kind, steps) {
     : `<div class="big-progress"><i data-w="${measured ? f.percent : Math.round((idx / RESTORE_STAGES.length) * 100)}"></i></div>`;
   const writing = kind === 'restore' && ['writing', 'verifying', 'cardid', 'resetting'].includes(f.stage);
   const stop = writing ? '' : `<button class="btn ghost" data-action="restore-cancel" ${f.cancelling ? 'disabled' : ''}>${f.cancelling ? t('restore_stopping') : t('restore_stop')}</button>`;
-  return `${steps}<div class="restore-status"><h3><span class="spinner"></span>${label(key)}</h3><p class="m-sub">${esc(sub)}</p></div>
+  return `${steps}<div class="restore-status"><h3><span class="spinner"></span>${label(key)}</h3>${f.hint === 'not_seen' ? `<div class="notice red">${esc(sub)}</div>` : `<p class="m-sub">${esc(sub)}</p>`}${waited}</div>
     ${bar}<div class="progress-meta"><span>${esc(f.port || '')}</span><span>${measured ? f.percent + '%' : ''}</span></div>
     ${deviceInfo(f)}<div class="sp12"></div><div class="notice">${t(kind === 'backup' ? 'b_warn' : 'r_warn')}</div><div class="buttons">${stop}</div>${logBlock(f)}`;
 }
@@ -882,7 +891,7 @@ function backupMain() {
       <div class="buttons"><button class="btn soft large wide" data-action="backup-go" ${st.worker ? '' : 'disabled'}>${t('backup_start')}</button></div>${logBlock(f)}`;
   }
   if (f.stage === 'done') {
-    return `<div class="result"><div class="icon">✓</div><h3>${t('b_done')}</h3><p>${t('b_done_sub')}</p></div>${deviceInfo(f)}
+    return `<div class="result"><div class="icon">✓</div><h3>${t('b_done')}</h3><p>${t('b_done_sub')}</p></div>${f.restarted ? '' : `<div class="notice">${t('r_done_replug')}</div>`}${deviceInfo(f)}
       <dl class="kv"><dt>${t('b_saved_to')}</dt><dd class="ellipsis" title="${esc(f.file || '')}">${esc(f.file || f.session || '')}</dd></dl>
       <div class="buttons"><button class="btn" data-action="reveal-session">${t('open_backup')}</button><button class="btn ghost" data-action="backup-again">${t('backup_again')}</button></div>${logBlock(f)}`;
   }

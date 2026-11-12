@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// Variables so tests can shorten them.
+var (
+	noticeEvery  = 10 * time.Second // how often the UI is reminded while waiting
+	notSeenAfter = 20 * time.Second // when "no AI Passport at all" replaces "replug"
+)
+
 func (j *restoreJob) espressifCandidates() []Candidate {
 	all, err := j.candidates()
 	if err != nil {
@@ -21,7 +27,7 @@ func (j *restoreJob) autoConnect() (Device, error) {
 	start := time.Now()
 	deadline := start.Add(j.timeout)
 	var lastNotice, lastCapture, nextHint time.Time
-	present, hintSent, multiSent := false, false, false
+	present, hintSent, multiSent, seenAny := false, false, false, false
 	var hints []string
 	lastError := ""
 
@@ -72,6 +78,9 @@ func (j *restoreJob) autoConnect() (Device, error) {
 			}
 		}
 		found := j.espressifCandidates()
+		if len(found) > 0 || len(hints) > 0 {
+			seenAny = true
+		}
 		switch {
 		case len(found) > 1:
 			if !multiSent || now.Sub(lastNotice) >= 5*time.Second {
@@ -99,9 +108,13 @@ func (j *restoreJob) autoConnect() (Device, error) {
 				}
 			}
 		}
-		if now.Sub(lastNotice) >= 10*time.Second {
-			j.emit(Event{Type: "hint", Code: "replug"})
-			msg := "Still waiting for the device"
+		if now.Sub(lastNotice) >= noticeEvery {
+			// After 20 s with no Espressif USB device at all, say so plainly.
+			code, msg := "replug", "Still waiting for the device"
+			if !seenAny && now.Sub(start) >= notSeenAfter {
+				code, msg = "not_seen", "No AI Passport has appeared on USB yet"
+			}
+			j.emit(Event{Type: "hint", Code: code})
 			if lastError != "" {
 				msg += " (last error: " + lastError + ")"
 			}

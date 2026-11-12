@@ -35,9 +35,11 @@ type State struct {
 	CardID     string `json:"cardid,omitempty"`  // keys, blank_ff, blank_00, unknown
 	Cancelling bool   `json:"cancelling,omitempty"`
 	// CardIDOverwritten is set when a play image replaced a non-blank identity area.
-	CardIDOverwritten bool      `json:"cardidOverwritten,omitempty"`
-	StartedAt         time.Time `json:"startedAt"`
-	EndedAt           time.Time `json:"endedAt"`
+	CardIDOverwritten bool `json:"cardidOverwritten,omitempty"`
+	// Restarted is set when the device was confirmed to have restarted after the job.
+	Restarted bool      `json:"restarted,omitempty"`
+	StartedAt time.Time `json:"startedAt"`
+	EndedAt   time.Time `json:"endedAt"`
 }
 
 type Job struct {
@@ -228,6 +230,7 @@ func (m *Manager) event(ev device.Event) {
 		m.state.CardID = ev.Status
 		m.state.CardIDOverwritten = ev.Overwrite && ev.Status == "keys"
 	case "complete":
+		m.state.Restarted = ev.Restarted
 		if ev.Session != "" {
 			m.state.Session = ev.Session
 		}
