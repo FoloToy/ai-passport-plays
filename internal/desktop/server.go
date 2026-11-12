@@ -42,6 +42,9 @@ type Server struct {
 	ChooseDir func(title, current string) (string, error)
 	Reveal    func(path string) error
 	OpenURL   func(url string) error
+	// Windows 7/8 edition only: report and install the USB serial driver.
+	DriverStatus  func() string
+	InstallDriver func() error
 
 	systemLanguage string
 
@@ -255,6 +258,12 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request) {
 		code, err = s.startRestore(body.FullBackup == nil || *body.FullBackup)
 	case "/api/firmware-backup/start":
 		code, err = s.startBackup()
+	case "/api/driver/install":
+		if s.InstallDriver == nil {
+			err, code = errors.New("this edition does not install drivers"), "driver"
+		} else if err = s.InstallDriver(); err != nil {
+			code = "driver"
+		}
 	case "/api/restore/cancel":
 		if !s.Flash.Cancel() {
 			err, code = errors.New("the restore can no longer be stopped"), "not_cancellable"
@@ -332,6 +341,7 @@ func (s *Server) state() map[string]any {
 		"platform":       runtime.GOOS,
 		"worker":         s.Worker.Available(),
 		"native":         s.ChooseDir != nil,
+		"driver":         s.driverStatus(),
 		"language":       cfg.Language,
 		"systemLanguage": s.systemLanguage,
 		"library":        info,
@@ -519,4 +529,12 @@ func (s *Server) openWeb(slug string) error {
 func readyVersion(m *syncer.Manager) int {
 	_, v := m.Ready()
 	return v
+}
+
+// driverStatus is "" when the edition has no driver support.
+func (s *Server) driverStatus() string {
+	if s.DriverStatus == nil {
+		return ""
+	}
+	return s.DriverStatus()
 }

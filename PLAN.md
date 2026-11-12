@@ -154,6 +154,6 @@ worker 端（esptool）：
 - Developer ID 签名、公证；Windows 代码签名。
 - 实机刷机验收（需要连接 AI Passport）。
 - Go 刷机（2026-11-12 替换 Python esptool）实机验收：刷入玩法、恢复出厂、备份固件、USB-JTAG 复位进下载模式、460800 波特率切换、Windows Code 43 抓取。目前只在 QEMU（esp-develop-9.2.2）上验证过。
-- Windows 7/8 版本（单独做，2026-11-12 决定暂缓）：见 docs/WINDOWS-7.md。驱动包已放在 drivers/windows7/（只覆盖 JTAG 接口，串口需用 Zadig 装 usbser）。
+- Windows 7/8 版本（2026-11-12 完成，v0.4.0）：go-legacy-win7 编译、Chrome 109 显示界面、内置 usbser INF 一键安装驱动。待在 Windows 7 真机上验收，见 docs/WINDOWS-7.md 第 4 节。
 - 备份固件实机验收（macOS 和 Windows）。
 - 恢复出厂实机验收（macOS 和 Windows）：正常设备、USB 只短暂出现的设备、拔插后端口变化、同时连两台、端口被占用、完整恢复后身份区一致。

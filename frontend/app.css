@@ -361,3 +361,4 @@ details.log pre { max-height: 180px; overflow: auto; background: #0a0a0b; border
 .center-note a { color: var(--green); text-decoration: none; }
 .center-note a:hover { text-decoration: underline; }
 button.link { background: none; border: 0; padding: 0; color: var(--green); font: inherit; cursor: pointer; text-decoration: underline; }
+.notice .buttons { display: flex; gap: 10px; margin-top: 10px; }

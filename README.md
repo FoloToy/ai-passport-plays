@@ -131,7 +131,7 @@ ALLOW_DIRTY=1 scripts/package-mac.sh   # 有未提交改动时也打包
 
 ## 打包（Windows）
 
-在 Windows 10/11 x64 上运行（桌面 App 只支持 Windows 10 及以上；Windows 7/8 用户请看 [docs/WINDOWS-7.md](docs/WINDOWS-7.md)，用 Chrome 109 网页版刷机并手动装驱动）：
+在 Windows 10/11 x64 上运行（这个版本只支持 Windows 10 及以上；Windows 7/8/8.1 有单独的版本，见下一节）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1          # 安装依赖并打包
@@ -139,6 +139,16 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload  #
 ```
 
 会生成 `dist\windows\` 下的 Setup.exe 安装包和免安装 ZIP。完整步骤和排错见 [docs/WINDOWS-BUILD.md](docs/WINDOWS-BUILD.md)。Windows 打包脚本还没有在真实 Windows 上验证过。
+
+## 打包（Windows 7 / 8 / 8.1）
+
+在 Mac（或 Linux）上就能打包，不需要 Windows：
+
+```sh
+scripts/package-win7.sh                 # 生成 dist/win7/ 下 x64 和 x86 两个 ZIP
+```
+
+脚本会下载固定版本的 go-legacy-win7（打了 Windows 7 补丁的 Go）并校验 SHA-256，用 `-tags win7` 编译。这个版本的界面在 Chrome 109 里打开，能检测并安装串口驱动。详见 [docs/WINDOWS-7.md](docs/WINDOWS-7.md)。
 
 ## 许可证
 

@@ -1,23 +1,31 @@
 # Windows 7 / 8 / 8.1 使用说明
 
-> 状态：**桌面 App 暂不支持 Windows 7 / 8 / 8.1**，以后单独做 Windows 7 版本。目前这类电脑请用浏览器在网页版刷机。
-> 本文档中的驱动步骤还没有在 Windows 7 真机上验证，第一次照做时请记录结果并更新本文档。
+> 状态：**有单独的 Windows 7 / 8 / 8.1 版**（v0.4.0 起），文件名带 `Windows7`，分 x64 和 x86（32 位）。功能和 Windows 10 版一样，界面用 Chrome 打开。
+> 还没有在 Windows 7 真机上验收过；第一次使用时请记录结果并更新本文档。
 
-## 1. 为什么桌面 App 不能在 Windows 7 上运行
+## 1. Windows 7 版和 Windows 10 版的区别
 
-| 组件 | 当前版本 | Windows 7 情况 |
+| 组件 | Windows 10/11、macOS 版 | Windows 7/8/8.1 版 |
 | --- | --- | --- |
-| 桌面外壳 | Go 1.26 + Wails v3 | Go 1.21 起要求 Windows 10；Go 1.20 是最后支持 Windows 7/8 的版本 |
-| 界面 | WebView2 | WebView2 Runtime 109 是最后支持 Windows 7/8/8.1 的版本 |
-| 刷机 | Go 实现（`internal/esp`），已不依赖 Python | 随外壳一起用 Go 1.20 编译即可 |
+| 编译器 | Go 1.26 | [go-legacy-win7](https://github.com/thongtech/go-legacy-win7) 1.26.11-1（打了 Windows 7 补丁的 Go 1.26，`scripts/package-win7.sh` 固定版本并校验 SHA-256） |
+| 界面 | Wails v3 + WebView2 窗口 | 同一套界面，在 Chrome 109 / Edge 109 的应用窗口里打开（`--app` 模式），只监听 `127.0.0.1` 的随机端口 |
+| 程序窗口 | 普通窗口 | 多一个黑色控制台窗口；关掉它就退出。刷机时不要关 |
+| 选择文件夹 | 系统对话框 | PowerShell 2.0 弹出的系统文件夹对话框 |
+| 串口驱动 | 系统自带 | 程序检测到没有驱动时，界面提示"安装驱动"（见 3.2） |
+| 安装方式 | Setup.exe 或 ZIP | 只有 ZIP，解压即用 |
 
-Windows 7 版本要用 Go 1.20、WebView2 109（或改用其他界面方案）重新打包，所以单独作为一个版本来做。刷机已经改成 Go 实现，不再需要 Python。
+源代码是同一份，Windows 7 版用 `-tags win7` 编译（`ui_win7.go` 代替 `ui_desktop.go`）。在 Mac 上运行 `scripts/package-win7.sh` 就能打包，不需要 Windows。
 
-## 2. Windows 7 用户现在怎么刷机：Chrome 109 + 网页版
+## 2. Windows 7 用户怎么用
 
-1. 安装 **Google Chrome 109**（或 Microsoft Edge 109）。这是最后支持 Windows 7/8/8.1 的版本，Chrome 110 起不再支持。
-   - 网页版刷机使用 Web Serial API，Chrome 89 起支持，所以 Chrome 109 可以用。
-   - Chrome 109 不再获得安全更新，只建议用于刷机。
+1. 安装 **Google Chrome 109**（或 Microsoft Edge 109）。这是最后支持 Windows 7/8/8.1 的版本。Chrome 109 不再获得安全更新，建议只用于本程序。
+2. 下载 `AI-Passport-Plays-<版本>-Windows7-x64.zip`（64 位）或 `-x86.zip`（32 位），完整解压后双击 `AIPassportPlays.exe`。
+3. 插上 AI Passport。界面提示没有驱动时，按 3.2 安装。
+4. 之后的用法和 Windows 10 版一样：更新玩法库、刷入玩法、备份固件、恢复出厂。
+
+### 不想装程序：网页版
+
+1. 同样需要 Chrome 109。网页版刷机使用 Web Serial API，Chrome 89 起支持。
 2. 按下面第 3 节安装驱动。
 3. 用 Chrome 109 打开 https://ai-passport.folotoy.cn/plays/ ，选择玩法后点"刷入"，在弹出的串口列表里选择 AI Passport。
 
@@ -44,6 +52,11 @@ Windows 7/8 不会自动给 CDC 设备匹配 `usbser.sys`，所以设备管理�
 
 ### 3.2 安装串口驱动（必须）
 
+**用 Windows 7 版程序（推荐）**：插上设备后，"设备工具"页和刷机窗口会出现"安装驱动"按钮。点它 → UAC 窗口点"是" → 如果提示"Windows 无法验证此驱动程序软件的发布者"，选"始终安装此驱动程序软件" → 装好后重新插拔设备。
+
+程序用的是 `drivers/ai-passport-usb-serial.inf`（源文件在 `internal/driver/`）：只给 `USB\VID_303A&PID_1001&MI_00`（串口接口）绑定 Windows 自带的 `usbser.sys`，用 `pnputil -i -a` 安装，不碰 JTAG 接口。INF 没有签名目录（.cat），所以 Windows 会提示一次发布者无法验证；`usbser.sys` 本身是微软签名的，64 位系统也能装。
+
+**手动安装（程序装不上时）**：
 推荐用 Zadig（libwdi 官方工具，支持 Windows 7 及以上），给 `MI_00` 接口装 Windows 自带的 `usbser.sys`：
 
 1. 下载 Zadig：https://zadig.akeo.ie/
@@ -77,12 +90,11 @@ Windows 7/8 不会自动给 CDC 设备匹配 `usbser.sys`，所以设备管理�
 | 换 USB 口后又出现感叹号 | Windows 7 按端口记驱动，换口后再装一次 |
 | 鼠标键盘失灵 | Zadig 里选错了设备。设备管理器里找到被替换的设备 → 卸载并删除驱动 → 重新插拔 |
 
-## 4. 以后做 Windows 7 版本时要做的事
+## 4. 待验收
 
-- 外壳改用 Go 1.20 编译（或换用 Windows 7 能运行的界面方案），界面固定 WebView2 Runtime 109 或改成本机浏览器打开。
-- 刷机已改用 Go（`internal/esp`、`internal/device`），不依赖 Python。要确认这些代码和依赖（go.bug.st/serial、golang.org/x/sys）能用 Go 1.20 编译；代码里用了 Go 1.21+ 的 `min`、`for range n` 等写法，需要改写。
-- 内置驱动安装：检测 `VID_303A&PID_1001&MI_00` 是否有驱动；没有就引导安装。需要 FoloToy 自己签名的 CDC INF（带 `.cat`），或在程序里用 libwdi 生成并安装。
-- 用 VirtualBox 里的 Windows 7 虚拟机 + USB 直通真实 AI Passport 测试（可用 Fleet 的 `win` 机器）。
+- 在 Windows 7 SP1 x64 和 x86 真机（或 VirtualBox + USB 直通）上：程序能启动、Chrome 109 打开界面、选择文件夹、更新玩法库。
+- 驱动：插上设备后提示"安装驱动"，安装成功出现 COM 口；刷入玩法、备份固件、恢复出厂都成功。
+- 没有装 Chrome 时的提示；第二次双击程序时直接打开已经在运行的界面。
 
 ## 参考
 

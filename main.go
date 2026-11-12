@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -12,9 +11,9 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/assets"
 	"github.com/FoloToy/ai-passport-plays/internal/desktop"
 	"github.com/FoloToy/ai-passport-plays/internal/device"
 	"github.com/FoloToy/ai-passport-plays/internal/esp"
@@ -23,11 +22,9 @@ import (
 	"github.com/FoloToy/ai-passport-plays/internal/instance"
 	"github.com/FoloToy/ai-passport-plays/internal/settings"
 	"github.com/FoloToy/ai-passport-plays/internal/syncer"
-	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-var version = "0.3.0-dev"
+var version = "0.4.0-dev"
 
 const appTitle = "AI Passport 玩法社区"
 
@@ -57,7 +54,8 @@ func main() {
 	}
 	unlock, err := instance.Acquire(dir)
 	if err != nil {
-		log.Fatal(err)
+		alreadyRunning(dir, err)
+		return
 	}
 	defer unlock()
 
@@ -70,42 +68,12 @@ func main() {
 	server.CheckUpdatesInBackground()
 
 	if *headless {
-		serveHeadless(server, *address, sync)
+		serveLoopback(server, *address, sync, func(url string) { fmt.Println(appTitle + " " + version + " " + url) })
+		<-interrupted()
 		return
 	}
 
-	app := application.New(application.Options{
-		Name:        appTitle,
-		Description: "Offline AI Passport play library and flasher",
-		Icon:        assets.Icon,
-		Assets:      application.AssetOptions{Handler: server},
-		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
-		ShouldQuit:  func() bool { return !flash.Active() },
-		OnShutdown:  sync.Cancel,
-	})
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: appTitle, Width: 1280, Height: 860, MinWidth: 980, MinHeight: 680, URL: "/",
-		BackgroundColour: application.NewRGB(12, 12, 13),
-	})
-	server.ChooseDir = func(title, current string) (string, error) {
-		d := app.Dialog.OpenFile().SetTitle(title).
-			CanChooseFiles(false).CanChooseDirectories(true).CanCreateDirectories(true).AttachToWindow(window)
-		if current != "" {
-			d = d.SetDirectory(filepath.Dir(current))
-		}
-		return d.PromptForSingleSelection()
-	}
-	server.OpenURL = app.Browser.OpenURL
-	window.OnWindowEvent(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if flash.Active() {
-			e.Cancel()
-			app.Dialog.Info().SetTitle("正在操作设备 / Device busy").SetMessage("请等待刷机或恢复出厂完成后再关闭窗口，否则设备可能无法启动。\nWait for flashing or the factory restore to finish before closing.").Show()
-		}
-	})
-	app.Menu.Set(application.DefaultApplicationMenu())
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
-	}
+	runUI(server, flash, sync)
 }
 
 func reveal(path string) error {
@@ -119,16 +87,21 @@ func reveal(path string) error {
 	}
 }
 
-func serveHeadless(server *desktop.Server, address string, sync *syncer.Manager) {
+// serveLoopback serves the UI on a private 127.0.0.1 listener (development, and the
+// Windows 7 edition, which shows it in Chrome). ready gets the page URL. The server
+// stops when the process exits.
+func serveLoopback(server *desktop.Server, address string, sync *syncer.Manager, ready func(url string)) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil || host != "127.0.0.1" {
-		log.Fatal("development listener must use 127.0.0.1")
+		log.Fatal("the UI listener must use 127.0.0.1")
 	}
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal(err)
 	}
-	server.OpenURL = func(url string) error { log.Print("open ", url); return nil }
+	if server.OpenURL == nil {
+		server.OpenURL = func(url string) error { log.Print("open ", url); return nil }
+	}
 	httpServer := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Host != listener.Addr().String() {
@@ -139,19 +112,19 @@ func serveHeadless(server *desktop.Server, address string, sync *syncer.Manager)
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	fmt.Println(appTitle + " " + version + " http://" + listener.Addr().String())
 	go func() {
 		if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
 			log.Print(err)
 		}
 	}()
+	ready("http://" + listener.Addr().String() + "/")
+}
+
+// interrupted is closed by Ctrl+C or, on Windows, by closing the console window.
+func interrupted() <-chan os.Signal {
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	<-stop
-	sync.Cancel()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	_ = httpServer.Shutdown(ctx)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	return stop
 }
 
 // runSelfTest is used by the packaging scripts to check the built app.
@@ -164,5 +137,5 @@ func runSelfTest() {
 		fmt.Fprintln(os.Stderr, "self-test failed:", err)
 		os.Exit(1)
 	}
-	fmt.Printf(`{"passed":true,"version":%q,"chip":"ESP32-C3","stub_bytes":%d,"factory":%q}`+"\n", version, stub, factory.Version)
+	fmt.Printf(`{"passed":true,"version":%q,"edition":%q,"chip":"ESP32-C3","stub_bytes":%d,"factory":%q}`+"\n", version, edition, stub, factory.Version)
 }
