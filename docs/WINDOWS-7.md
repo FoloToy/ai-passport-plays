@@ -23,6 +23,20 @@
 3. 插上 AI Passport。界面提示没有驱动时，按 3.2 安装。
 4. 之后的用法和 Windows 10 版一样：更新玩法库、刷入玩法、备份固件、恢复出厂。
 
+### Chrome 109 安装包（Google 官方地址）
+
+Google 已经不在官网提供 Windows 7 版下载，但官方服务器上的离线安装包还在。版本 109.0.5414.120，下载后双击安装，不需要联网：
+
+| 系统 | 下载地址 | SHA-256 |
+| --- | --- | --- |
+| 64 位 | https://dl.google.com/release2/chrome/czao2hrvpk5wgqrkz4kks5r734_109.0.5414.120/109.0.5414.120_chrome_installer.exe | `adc1a5953f2a7cb0ea42e02cf0a55787494b852ae575b24eca4cdb48d93853d1` |
+| 32 位 | https://dl.google.com/release2/chrome/acihtkcueyye3ymoj2afvv7ulzxa_109.0.5414.120/109.0.5414.120_chrome_installer.exe | `279dd1321af6ce4ef2459bed2e4388ff9a1585f0cbb37081cdce2cbdd172bcd6` |
+
+- 两个文件名一样，注意别装错位数。64 位系统装 32 位 Chrome 也能用。
+- 安装前可以右键文件 → 属性 → 数字签名，签名者应为 **Google LLC**；或者在 PowerShell 里用 `certutil -hashfile <文件> SHA256` 对照上表。
+- 只从 `dl.google.com` 下载，不要用第三方网站提供的"Chrome 109"。
+- 本程序不随包分发 Chrome 安装包。
+
 ### 不想装程序：网页版
 
 1. 同样需要 Chrome 109。网页版刷机使用 Web Serial API，Chrome 89 起支持。
