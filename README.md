@@ -87,7 +87,7 @@ avatars/<name>.webp        作者头像
 
 ## 开发
 
-需要 Go 1.26 和 Xcode 命令行工具。
+需要 Go 1.26 和 Xcode 命令行工具。用 AI Agent 开发时先读 [AGENTS.md](AGENTS.md)（必须遵守的设备安全规则、约定、测试方法）；发版步骤见 [docs/RELEASE.md](docs/RELEASE.md)。
 
 ```sh
 export GOTOOLCHAIN=go1.26.0
@@ -146,7 +146,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1          #
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload  # 打包并上传到 Release
 ```
 
-会生成 `dist\windows\` 下的 Setup.exe 安装包和免安装 ZIP。完整步骤和排错见 [docs/WINDOWS-BUILD.md](docs/WINDOWS-BUILD.md)。Windows 打包脚本还没有在真实 Windows 上验证过。
+会生成 `dist\windows\` 下的 Setup.exe 安装包和免安装 ZIP。完整步骤和排错见 [docs/WINDOWS-BUILD.md](docs/WINDOWS-BUILD.md)。
 
 ## 打包（Windows 7 / 8 / 8.1）
 
