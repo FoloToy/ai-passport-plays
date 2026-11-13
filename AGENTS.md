@@ -6,7 +6,7 @@
 
 **AI Passport 玩法社区（离线桌面版）**：把 https://ai-passport.folotoy.cn/plays/ 的玩法全部下载到本地，离线浏览，并把玩法固件刷进 AI Passport（ESP32-C3，8 MB Flash）。另外有"设备工具"：备份固件（只读）和恢复出厂固件。
 
-- 仓库：`FoloToy/ai-passport-plays`（私有），默认分支 `main`，PR 也提到 `main`。
+- 仓库：`FoloToy/ai-passport-plays`（公开，MIT 许可证，见 `LICENSE`），默认分支 `main`，PR 也提到 `main`。
 - 平台：macOS（arm64 / x86_64 / universal）、Windows 10/11 x64、Windows 7/8/8.1（x64 / x86，单独的版本）。
 - 界面中英双语（`frontend/app.js` 里的 `I18N.zh` / `I18N.en`）。
 - 一次只操作一台设备，只支持 ESP32-C3。
@@ -117,7 +117,7 @@ ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./int
 
 - 提交信息用 [Conventional Commits](https://www.conventionalcommits.org/)（`feat:`、`fix:`、`docs:`、`chore:`…）。
 - 只有用户要求时才提交、推送或发版。
-- 不要提交 `dist/`、`.runtime/`、备份文件、本机路径或个人信息。
+- 不要提交 `dist/`、`.runtime/`、备份文件、本机路径或个人信息。仓库是公开的，提交的一切都会被所有人看到。
 
 ## 发版
 

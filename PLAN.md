@@ -127,7 +127,7 @@ worker 端（esptool）：
 - 刷机：单台；只支持 AI Passport，刷机前检查芯片必须是 ESP32-C3。
 - 设备 USB 免驱（与浏览器 Web Serial 刷机一致）。
 - 界面中英文；"分类特别难"指"分类 + 专题"。
-- 技术栈沿用 Magic-Flash；项目名"AI Passport 玩法社区"，仓库 FoloToy/ai-passport-plays（私有）。
+- 技术栈沿用 Magic-Flash；项目名"AI Passport 玩法社区"，仓库 FoloToy/ai-passport-plays（2026-11-13 起公开，MIT）。
 
 ## 11. 实施中发现的问题
 

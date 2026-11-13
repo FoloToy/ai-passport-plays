@@ -26,10 +26,10 @@
 在 Windows 上打开 **PowerShell**（不需要管理员权限，winget 安装软件时可能会弹出 UAC 窗口）。
 
 ```powershell
-# 1. 安装 GitHub CLI 并登录（仓库是私有的）
+# 1. 安装 GitHub CLI 并登录（用来克隆代码和上传 Release）
 winget install -e --id GitHub.cli --accept-package-agreements --accept-source-agreements
 # 重新打开一个 PowerShell 窗口，让 PATH 生效
-gh auth login            # 选 GitHub.com → HTTPS → 浏览器登录；账号需要能访问 FoloToy/ai-passport-plays
+gh auth login            # 选 GitHub.com → HTTPS → 浏览器登录；上传 Release 需要仓库的写权限
 
 # 2. 克隆代码
 gh repo clone FoloToy/ai-passport-plays

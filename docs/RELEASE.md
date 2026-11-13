@@ -36,7 +36,7 @@ go run github.com/tc-hib/go-winres@v0.3.3 simply --icon assets/icon.png --manife
 
 ### 在远程 Windows 机器上打 Windows 10+ 版
 
-仓库是私有的，Windows 机器上不一定有 GitHub 凭据，可以用 git bundle 传过去：
+Windows 机器可以直接 `git clone https://github.com/FoloToy/ai-passport-plays.git`；网络不通 GitHub 时，用 git bundle 传过去：
 
 ```sh
 git bundle create /tmp/plays.bundle main

@@ -160,4 +160,4 @@ scripts/package-win7.sh                 # 生成 dist/win7/ 下 x64 和 x86 两�
 
 ## 许可证
 
-见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+本项目的源代码以 [MIT 许可证](LICENSE) 发布。第三方组件、内置的 FoloToy 出厂固件（`internal/factory/firmware/`）和 Espressif 驱动（`drivers/windows7/`）不在 MIT 范围内，各自的来源和许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。
