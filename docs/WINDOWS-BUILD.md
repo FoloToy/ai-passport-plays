@@ -1,10 +1,10 @@
 # Windows 打包说明（交接文档）
 
-本文档写给在 Windows 机器上执行打包的人或 AI。目标：在 Windows 10/11 x64 上打出安装包和免安装 ZIP，上传到 GitHub Release `v0.4.0`。
+本文档写给在 Windows 机器上执行打包的人或 AI。目标：在 Windows 10/11 x64 上打出安装包和免安装 ZIP，上传到 GitHub Release `v0.4.1`。
 
 ## 当前状态
 
-- macOS 版已经完成，`v0.4.0` Release 里有 DMG（v0.2.0 起新增恢复出厂，v0.3.0 新增备份固件，v0.4.0 刷机改用 Go、不再需要 Python，取代原 FoloToy-AI-Passport-Factory-Restore）：https://github.com/FoloToy/ai-passport-plays/releases/tag/v0.3.0
+- macOS 版已经完成，`v0.4.1` Release 里有 DMG（v0.2.0 起新增恢复出厂，v0.3.0 新增备份固件，v0.4.0 刷机改用 Go、不再需要 Python，取代原 FoloToy-AI-Passport-Factory-Restore）：https://github.com/FoloToy/ai-passport-plays/releases/tag/v0.3.0
 - Windows 版的代码已经在 Mac 上验证过：交叉编译通过，`GOOS=windows go vet` 通过，全部测试代码能在 Windows 下编译。
 - **Windows 打包脚本还没有在真实 Windows 上跑过**，第一次运行可能需要修小问题，见文末"可能遇到的问题"。
 
@@ -14,8 +14,8 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `AI-Passport-Plays-0.4.0-Windows-x64-Setup.exe` | 安装版（Inno Setup，按用户安装，不需要管理员权限） |
-| `AI-Passport-Plays-0.4.0-Windows-x64.zip` | 免安装版 |
+| `AI-Passport-Plays-0.4.1-Windows-x64-Setup.exe` | 安装版（Inno Setup，按用户安装，不需要管理员权限） |
+| `AI-Passport-Plays-0.4.1-Windows-x64.zip` | 免安装版 |
 | `*.sha256` | 校验和 |
 | `AI Passport Plays\` | 打包用的临时目录（不需要上传） |
 
@@ -35,7 +35,7 @@ gh auth login            # 选 GitHub.com → HTTPS → 浏览器登录；账号
 gh repo clone FoloToy/ai-passport-plays
 cd ai-passport-plays
 
-# 3. 一键安装依赖、打包、上传到 Release v0.4.0
+# 3. 一键安装依赖、打包、上传到 Release v0.4.1
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload
 ```
 
@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload
    - 下载微软官方的 WebView2 安装程序，并校验它的签名。
    - 自检打包好的程序：`AIPassportPlays.exe -self-test`（检查内置的 ESP32-C3 flasher stub 和出厂固件）。
    - 生成 ZIP，用 Inno Setup 生成 Setup.exe，写入 sha256。
-4. 带 `-Upload` 时，执行 `gh release upload v0.4.0 ... --clobber`。
+4. 带 `-Upload` 时，执行 `gh release upload v0.4.1 ... --clobber`。
 
 只打包、不上传：去掉 `-Upload`。已经装好工具时，可以直接运行：
 
@@ -88,6 +88,6 @@ powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1
   ```sh
   go run github.com/tc-hib/go-winres@v0.3.3 simply --icon assets/icon.png --manifest gui \
     --product-name "AI Passport 玩法社区" --file-description "AI Passport 玩法社区" --copyright FoloToy \
-    --product-version 0.4.0.0 --file-version 0.4.0.0 --original-filename AIPassportPlays.exe --arch amd64,arm64,386
+    --product-version 0.4.1.0 --file-version 0.4.1.0 --original-filename AIPassportPlays.exe --arch amd64,arm64,386
   ```
 - 改了版本号时：同时改 `VERSION` 和上面 go-winres 命令里的版本号
