@@ -55,7 +55,8 @@ for arch in amd64 386; do
   sed 's/$/\r/' > "$pkg/START-HERE.txt" <<TXT
 AI Passport 玩法社区 ${version} / Windows 7、8、8.1 版（${label}）
 
-1. 先安装 Google Chrome 109（Windows 7 能装的最后一个版本）。Google 官方离线安装包：
+1. 先安装 Google Chrome 109（Windows 7 能装的最后一个版本）。在下载本程序的 GitHub Release 页面
+   下载 Chrome-109.0.5414.120-Windows-x64-offline-installer.exe（32 位系统用 x86 的），或用 Google 官方地址：
    64 位：https://dl.google.com/release2/chrome/czao2hrvpk5wgqrkz4kks5r734_109.0.5414.120/109.0.5414.120_chrome_installer.exe
    32 位：https://dl.google.com/release2/chrome/acihtkcueyye3ymoj2afvv7ulzxa_109.0.5414.120/109.0.5414.120_chrome_installer.exe
    安装包的数字签名应为 Google LLC；SHA-256 校验值见 WINDOWS-7.md。不要从第三方网站下载。
@@ -68,7 +69,7 @@ AI Passport 玩法社区 ${version} / Windows 7、8、8.1 版（${label}）
 32 位 Windows 用 x86 版，64 位用 x64 版（"计算机"右键 → 属性 → 系统类型）。
 本版本没有代码签名，杀毒软件可能误报。还没有在 Windows 7 真机上验收过。
 
-Windows 7/8/8.1 edition. Install Chrome 109 (official installer links above), extract the folder, run AIPassportPlays.exe and keep
+Windows 7/8/8.1 edition. Install Chrome 109 (installer on the Release page, or the official links above), extract the folder, run AIPassportPlays.exe and keep
 the console window open. If the app says the serial driver is missing, click "Install driver".
 TXT
   (cd "$dest" && rm -f "$name.zip" && zip -qr "$name.zip" "$name" && shasum -a 256 "$name.zip" > "$name.zip.sha256")

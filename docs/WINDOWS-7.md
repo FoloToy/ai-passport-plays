@@ -25,7 +25,7 @@
 
 ### Chrome 109 安装包（Google 官方地址）
 
-Google 已经不在官网提供 Windows 7 版下载，但官方服务器上的离线安装包还在。版本 109.0.5414.120，下载后双击安装，不需要联网：
+Google 已经不在官网提供 Windows 7 版下载。最简单的办法：在本程序的 [GitHub Release 页面](https://github.com/FoloToy/ai-passport-plays/releases/latest) 下载 `Chrome-109.0.5414.120-Windows-x64-offline-installer.exe`（64 位）或 `-x86-offline-installer.exe`（32 位），这是下面 Google 官方安装包的原样转存。也可以直接从 Google 服务器下载。版本 109.0.5414.120，下载后双击安装，不需要联网：
 
 | 系统 | 下载地址 | SHA-256 |
 | --- | --- | --- |
@@ -34,8 +34,8 @@ Google 已经不在官网提供 Windows 7 版下载，但官方服务器上的�
 
 - 两个文件名一样，注意别装错位数。64 位系统装 32 位 Chrome 也能用。
 - 安装前可以右键文件 → 属性 → 数字签名，签名者应为 **Google LLC**；或者在 PowerShell 里用 `certutil -hashfile <文件> SHA256` 对照上表。
-- 只从 `dl.google.com` 下载，不要用第三方网站提供的"Chrome 109"。
-- 本程序不随包分发 Chrome 安装包。
+- 只从本程序的 Release 页面或 `dl.google.com` 下载，不要用第三方网站提供的"Chrome 109"。
+- 安装包没有放进程序 ZIP 里（太大），单独放在 Release 页面。
 
 ### 不想装程序：网页版
 
