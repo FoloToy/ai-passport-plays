@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
 )
 
 // Port is a serial port offered to the user.

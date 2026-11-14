@@ -11,5 +11,5 @@ __pycache__/
 *.app/
 *.log
 
-# Bundled factory restore segments (hash-checked in internal/factory)
-!internal/factory/firmware/*.bin
+# Bundled factory restore segments (hash-checked in pkg/factory)
+!pkg/factory/firmware/*.bin

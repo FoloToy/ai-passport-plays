@@ -48,7 +48,7 @@ package() {
   cp "$work/$exe-$label" "$app/Contents/MacOS/$exe"
   cp assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
   cp THIRD_PARTY.md "$app/Contents/Resources/ThirdParty/"
-  cp internal/esp/stub/LICENSE-APACHE internal/esp/stub/LICENSE-MIT "$app/Contents/Resources/ThirdParty/esp-flasher-stub/"
+  cp pkg/esp/stub/LICENSE-APACHE pkg/esp/stub/LICENSE-MIT "$app/Contents/Resources/ThirdParty/esp-flasher-stub/"
   cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

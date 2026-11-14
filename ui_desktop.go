@@ -1,23 +1,16 @@
-//go:build !win7
-
 package main
 
 import (
 	"log"
 	"path/filepath"
 
-	"github.com/FoloToy/ai-passport-plays/assets"
-	"github.com/FoloToy/ai-passport-plays/internal/desktop"
-	"github.com/FoloToy/ai-passport-plays/internal/flasher"
-	"github.com/FoloToy/ai-passport-plays/internal/syncer"
+	"github.com/FoloToy/ai-passport-desktop/assets"
+	"github.com/FoloToy/ai-passport-desktop/internal/desktop"
+	"github.com/FoloToy/ai-passport-desktop/pkg/flasher"
+	"github.com/FoloToy/ai-passport-desktop/pkg/syncer"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
-
-// edition names the build in the self-test output.
-const edition = "desktop"
-
-func alreadyRunning(_ string, err error) { log.Fatal(err) }
 
 // runUI shows the UI in a native WebView window (macOS, Windows 10 and later).
 func runUI(server *desktop.Server, flash *flasher.Manager, sync *syncer.Manager) {

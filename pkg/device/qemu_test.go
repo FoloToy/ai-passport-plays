@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
 )
 
 // TestQEMURestoreAndBackup runs a full factory restore and then a firmware backup on

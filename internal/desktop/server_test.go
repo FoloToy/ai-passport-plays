@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/device"
-	"github.com/FoloToy/ai-passport-plays/internal/factory"
-	"github.com/FoloToy/ai-passport-plays/internal/flasher"
-	"github.com/FoloToy/ai-passport-plays/internal/settings"
-	"github.com/FoloToy/ai-passport-plays/internal/syncer"
+	"github.com/FoloToy/ai-passport-desktop/pkg/device"
+	"github.com/FoloToy/ai-passport-desktop/pkg/factory"
+	"github.com/FoloToy/ai-passport-desktop/pkg/flasher"
+	"github.com/FoloToy/ai-passport-desktop/pkg/settings"
+	"github.com/FoloToy/ai-passport-desktop/pkg/syncer"
 )
 
 func newServer(t *testing.T) (*Server, string) {

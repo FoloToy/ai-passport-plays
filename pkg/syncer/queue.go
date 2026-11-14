@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/firmware"
-	"github.com/FoloToy/ai-passport-plays/internal/library"
+	"github.com/FoloToy/ai-passport-desktop/pkg/firmware"
+	"github.com/FoloToy/ai-passport-desktop/pkg/library"
 )
 
 // The community limits firmware downloads per IP. On HTTP 429 every firmware

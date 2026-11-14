@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/device"
+	"github.com/FoloToy/ai-passport-desktop/pkg/device"
 )
 
 type fakeRunner struct {

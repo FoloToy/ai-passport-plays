@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/FoloToy/ai-passport-plays/internal/library"
+	"github.com/FoloToy/ai-passport-desktop/pkg/library"
 )
 
 // ErrTargetNotEmpty means the destination already holds other files.

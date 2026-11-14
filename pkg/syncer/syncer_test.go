@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/library"
+	"github.com/FoloToy/ai-passport-desktop/pkg/library"
 )
 
 // fakeImage returns a minimal ESP32-C3 merged image header followed by payload.

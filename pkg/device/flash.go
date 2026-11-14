@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
 )
 
 const (

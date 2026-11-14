@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
-	"github.com/FoloToy/ai-passport-plays/internal/factory"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/factory"
 )
 
 // Factory restore, ported from FoloToy-AI-Passport-Factory-Restore v1.5.2.

@@ -36,7 +36,7 @@ New-Item -ItemType Directory -Force $thirdParty | Out-Null
 Copy-Item 'THIRD_PARTY.md' $thirdParty
 $stubLicenses = Join-Path $thirdParty 'esp-flasher-stub'
 New-Item -ItemType Directory -Force $stubLicenses | Out-Null
-Copy-Item 'internal/esp/stub/LICENSE-APACHE', 'internal/esp/stub/LICENSE-MIT' $stubLicenses
+Copy-Item 'pkg/esp/stub/LICENSE-APACHE', 'pkg/esp/stub/LICENSE-MIT' $stubLicenses
 Copy-Item 'README.md' $package
 (git rev-parse HEAD).Trim() | Set-Content (Join-Path $package 'source-commit.txt') -Encoding ascii
 

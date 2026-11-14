@@ -30,18 +30,17 @@ go run github.com/tc-hib/go-winres@v0.3.3 simply --icon assets/icon.png --manife
 | --- | --- | --- | --- |
 | macOS arm64 / x86_64 / universal | Apple 芯片的 Mac | `scripts/package-mac.sh` | `dist/AI-Passport-Plays-X.Y.Z-macOS-{arm64,x86_64,universal}.dmg` |
 | Windows 10/11 x64 | Windows 10/11 机器 | `powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1` | `dist\windows\…-Windows-x64-Setup.exe` 和 `…-Windows-x64.zip` |
-| Windows 7/8/8.1 x64 / x86 | Mac 或 Linux | `scripts/package-win7.sh` | `dist/win7/…-Windows7-{x64,x86}.zip` |
 
 每个产物旁边都有 `.sha256` 文件，一起上传。
 
 ### 在远程 Windows 机器上打 Windows 10+ 版
 
-Windows 机器可以直接 `git clone https://github.com/FoloToy/ai-passport-plays.git`；网络不通 GitHub 时，用 git bundle 传过去：
+Windows 机器可以直接 `git clone https://github.com/FoloToy/ai-passport-desktop.git`；网络不通 GitHub 时，用 git bundle 传过去：
 
 ```sh
 git bundle create /tmp/plays.bundle main
 scp /tmp/plays.bundle <windows-host>:build/
-ssh <windows-host> "cd build && git clone -b main plays.bundle ai-passport-plays"
+ssh <windows-host> "cd build && git clone -b main plays.bundle ai-passport-desktop"
 ```
 
 在 Windows 上运行 `scripts\package-windows.ps1`（需要 Go 1.26 和 Inno Setup 6）。Inno Setup 装在用户目录时设 `PLAYS_ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe`；国内网络设 `GOPROXY=https://goproxy.cn,direct`。打好后把 `dist\windows\` 下的 4 个文件 scp 回来。详细排错见 [WINDOWS-BUILD.md](WINDOWS-BUILD.md)。
@@ -51,22 +50,12 @@ ssh <windows-host> "cd build && git clone -b main plays.bundle ai-passport-plays
 ```sh
 gh release create vX.Y.Z --target <完整的 commit SHA> --prerelease \
   --title "vX.Y.Z：一句话概括" --notes-file notes.md \
-  dist/*.dmg dist/*.dmg.sha256 dist/windows/* dist/win7/*.zip dist/win7/*.zip.sha256
+  dist/*.dmg dist/*.dmg.sha256 dist/windows/*
 ```
 
 - 在没有真机验收前，一律标记 `--prerelease`。
 - 发布说明用中文，结构参照上一个版本：一句话概括 → 下载对照表（系统 → 文件名）→ **新增** / **修复** → **测试情况**（如实写哪些在真机上验证过、哪些没有、有没有代码签名）。
-- 每个 Release 都要带上 Chrome 109 离线安装包（Windows 7 用户需要，旧 Release 删掉后它们也就没了）。从 Google 官方地址下载（地址和 SHA-256 见 [WINDOWS-7.md](WINDOWS-7.md)），**核对 SHA-256 一致**后改名上传：
-
-  ```sh
-  curl -fL -o Chrome-109.0.5414.120-Windows-x64-offline-installer.exe <64 位地址>
-  curl -fL -o Chrome-109.0.5414.120-Windows-x86-offline-installer.exe <32 位地址>
-  for f in Chrome-109.*.exe; do shasum -a 256 "$f" > "$f.sha256"; done   # 和 WINDOWS-7.md 里的值对照
-  gh release upload vX.Y.Z Chrome-109.*
-  ```
-
-  下载表里加一行指向它们。
-- 发布后核对资产列表（18 个文件：3 个 DMG、Setup.exe、Win10+ ZIP、2 个 Win7 ZIP、2 个 Chrome 109 安装包，各带 `.sha256`）。
+- 发布后核对资产列表（10 个文件：3 个 DMG、Setup.exe、ZIP，各带 `.sha256`）。
 
 ## 4. 清理旧版本
 
@@ -75,3 +64,5 @@ gh release list
 gh release delete vOLD --cleanup-tag --yes   # 删除 Release 和远程 tag
 git tag -d vOLD                              # 删除本地 tag
 ```
+
+Windows 7/8/8.1 客户端在 [ai-passport-desktop-windows7](https://github.com/FoloToy/ai-passport-desktop-windows7) 单独发版。

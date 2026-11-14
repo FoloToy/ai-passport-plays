@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
 )
 
 // probeROM reports whether the ROM bootloader answers SYNC on path without resetting it.

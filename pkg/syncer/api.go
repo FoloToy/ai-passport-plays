@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/library"
+	"github.com/FoloToy/ai-passport-desktop/pkg/library"
 )
 
 // DefaultOrigin is the AI Passport community site.

@@ -72,8 +72,6 @@ const I18N = {
     err_flash_size: '设备 Flash 容量不足 8 MB。', err_connect: '无法连接设备。请重新插拔数据线后重试；如仍失败，按住 BOOT 键再插入 USB。',
     err_checksum: '固件校验失败，请重新更新玩法库。', err_image: '固件文件无效。', err_image_chip: '该固件不是为 AI Passport (ESP32-C3) 构建的。',
     err_worker: '刷机组件不可用。', err_other: '发生错误。', err_no_picker: '请直接输入文件夹路径。',
-    driver_missing: '电脑没有给 AI Passport 的串口装驱动（Windows 7/8 需要手动安装一次）。点"安装驱动"，在弹出的窗口里点"是"，如果提示"无法验证发布者"，选"始终安装此驱动程序软件"。装好后重新插拔设备。',
-    driver_install: '安装驱动', driver_installing: '正在安装驱动…', driver_done: '驱动已安装，请重新插拔设备。', err_driver: '驱动没有装好。可以按 docs/WINDOWS-7.md 用 Zadig 手动安装。',
     err_rate_limited: '固件服务器繁忙，请稍后重试。', err_no_firmware: '这个玩法没有可下载的固件。', err_not_ready: '固件还没有下载。',
     // factory restore
     nav_restore: '设备工具', tools_title: '设备工具', tools_lead: '备份或恢复 AI Passport 上的固件。两个工具都会自动找到设备，不用选串口。', restore_title: '恢复出厂',
@@ -170,8 +168,6 @@ const I18N = {
     err_flash_size: 'The device flash is smaller than 8 MB.', err_connect: 'Cannot connect to the device. Reconnect the cable and retry; if it still fails, hold BOOT while plugging in USB.',
     err_checksum: 'Firmware check failed. Update the library again.', err_image: 'Invalid firmware file.', err_image_chip: 'This firmware is not built for AI Passport (ESP32-C3).',
     err_worker: 'The flashing component is unavailable.', err_other: 'Something went wrong.', err_no_picker: 'Type the folder path instead.',
-    driver_missing: 'This PC has no driver for the AI Passport serial port (Windows 7/8 need it installed once). Click "Install driver", answer "Yes", and if Windows cannot verify the publisher choose "Install this driver software anyway". Then reconnect the device.',
-    driver_install: 'Install driver', driver_installing: 'Installing the driver…', driver_done: 'Driver installed. Reconnect the device.', err_driver: 'The driver was not installed. See docs/WINDOWS-7.md to install it with Zadig.',
     err_rate_limited: 'The firmware server is busy. Try again later.', err_no_firmware: 'This app has no downloadable firmware.', err_not_ready: 'Firmware not downloaded yet.',
     // factory restore
     nav_restore: 'Device tools', tools_title: 'Device tools', tools_lead: 'Back up or restore the firmware on an AI Passport. Both tools find the device by themselves; no port to choose.', restore_title: 'Factory restore',
@@ -737,12 +733,6 @@ function requestFetch(slug) {
   api('firmware/fetch', { slug }).then(() => poll()).catch(e => { S.flash.fetchError = e; updateModal(); });
 }
 
-function driverNotice() {
-  if (S.server.driver !== 'missing') return '';
-  const busy = S.driverBusy;
-  return `<div class="notice red">${t('driver_missing')}<div class="buttons"><button class="btn primary" data-action="install-driver" ${busy ? 'disabled' : ''}>${busy ? t('driver_installing') : t('driver_install')}</button></div></div>`;
-}
-
 function flashBody() {
   const f = S.server.flash;
   const p = S.bySlug.get(S.flash.slug);
@@ -757,7 +747,7 @@ function flashBody() {
     return `<div class="steps"><span class="on"></span><span></span><span></span></div>
       <p class="m-title"><b>${title}</b></p>
       <p class="m-sub">${t('step_connect')}</p>
-      ${driverNotice()}<div class="ports">${list}</div>
+      <div class="ports">${list}</div>
       <div class="notice">${t('flash_warn')}</div>
       <div class="modal-foot inline"><button class="btn ghost" data-action="scan-ports">${t('refresh')}</button><button class="btn" data-action="close-modal">${t('cancel')}</button><button class="btn primary" data-action="start-flash" ${S.flash.port ? '' : 'disabled'}>${t('start_flash')}</button></div>`;
   }
@@ -803,7 +793,7 @@ function renderRestore() {
   return `<div class="settings restore">
     <h1>${t('tools_title')}</h1>
     <p class="lead">${t('tools_lead')}</p>
-    ${driverNotice()}
+    
     <section class="panel"><h2>${t('backup_title')}</h2><p>${t('backup_lead')}</p><div id="backup-main">${backupMain()}</div></section>
     <section class="panel"><h2>${t('restore_title')}</h2><p>${t('restore_lead')}</p><div id="restore-main">${restoreMain()}</div></section>
     <section class="panel">
@@ -1171,11 +1161,6 @@ const actions = {
   },
   'fetch-retry': () => { requestFetch(S.flash.slug); updateModal(); },
   'pick-port': el => { S.flash.port = el.value; updateModal(); },
-  'install-driver': async () => {
-    S.driverBusy = true; render();
-    try { await api('driver/install', {}); toast(t('driver_done')); } catch (e) { showError(e); }
-    S.driverBusy = false; await poll(true);
-  },
   'scan-ports': () => { S.flash.ports = null; updateModal(); scanPorts(); },
   'start-flash': async () => {
     try {
@@ -1294,7 +1279,7 @@ async function poll(forceRender) {
   lastSyncRunning = st.sync.running;
   const r = parseRoute();
   const stillWelcome = !st.library.hasIndex && r.name === 'library';
-  if (first || forceRender || catalogChanged || syncFinished || (prev && prev.language !== st.language) || (prev && prev.driver !== st.driver)) {
+  if (first || forceRender || catalogChanged || syncFinished || (prev && prev.language !== st.language)) {
     render();
   } else {
     renderTopRight();

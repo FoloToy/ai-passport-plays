@@ -20,9 +20,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/firmware"
-	"github.com/FoloToy/ai-passport-plays/internal/library"
-	"github.com/FoloToy/ai-passport-plays/internal/settings"
+	"github.com/FoloToy/ai-passport-desktop/pkg/firmware"
+	"github.com/FoloToy/ai-passport-desktop/pkg/library"
+	"github.com/FoloToy/ai-passport-desktop/pkg/settings"
 )
 
 // Error codes shown to the UI, which translates them.

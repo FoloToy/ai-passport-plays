@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
-	"github.com/FoloToy/ai-passport-plays/internal/factory"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/factory"
 )
 
 const testMAC = "4c:11:ae:32:62:34"

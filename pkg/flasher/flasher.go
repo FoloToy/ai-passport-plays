@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/device"
-	"github.com/FoloToy/ai-passport-plays/internal/firmware"
+	"github.com/FoloToy/ai-passport-desktop/pkg/device"
+	"github.com/FoloToy/ai-passport-desktop/pkg/firmware"
 )
 
 type State struct {

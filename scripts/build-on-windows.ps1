@@ -42,7 +42,7 @@ if ($LASTEXITCODE) { throw "package-windows.ps1 failed ($LASTEXITCODE)" }
 if ($Upload) {
     $version = (Get-Content VERSION -Raw).Trim()
     $assets = Get-ChildItem 'dist/windows' -File | Where-Object { $_.Name -match '\.(exe|zip|sha256)$' } | ForEach-Object { $_.FullName }
-    gh release upload "v$version" @assets --clobber --repo FoloToy/ai-passport-plays
+    gh release upload "v$version" @assets --clobber --repo FoloToy/ai-passport-desktop
     if ($LASTEXITCODE) { throw 'gh release upload failed' }
-    Write-Host "Uploaded to https://github.com/FoloToy/ai-passport-plays/releases/tag/v$version" -ForegroundColor Green
+    Write-Host "Uploaded to https://github.com/FoloToy/ai-passport-desktop/releases/tag/v$version" -ForegroundColor Green
 }

@@ -6,8 +6,9 @@
 
 **AI Passport 玩法社区（离线桌面版）**：把 https://ai-passport.folotoy.cn/plays/ 的玩法全部下载到本地，离线浏览，并把玩法固件刷进 AI Passport（ESP32-C3，8 MB Flash）。另外有"设备工具"：备份固件（只读）和恢复出厂固件。
 
-- 仓库：`FoloToy/ai-passport-plays`（公开，MIT 许可证，见 `LICENSE`），默认分支 `main`，PR 也提到 `main`。
-- 平台：macOS（arm64 / x86_64 / universal）、Windows 10/11 x64、Windows 7/8/8.1（x64 / x86，单独的版本）。
+- 仓库：`FoloToy/ai-passport-desktop`（公开，MIT 许可证，见 `LICENSE`），默认分支 `main`，PR 也提到 `main`。
+- 平台：macOS（arm64 / x86_64 / universal）、Windows 10/11 x64。
+- **Windows 7/8/8.1 不在这个仓库**：原生 Win32 客户端在 [ai-passport-desktop-windows7](https://github.com/FoloToy/ai-passport-desktop-windows7)，它以 Go 模块的方式引用本仓库的 `pkg/`。
 - 界面中英双语（`frontend/app.js` 里的 `I18N.zh` / `I18N.en`）。
 - 一次只操作一台设备，只支持 ESP32-C3。
 
@@ -15,10 +16,9 @@
 
 | 部分 | 实现 |
 | --- | --- |
-| 外壳 | Go 1.26.0（`GOTOOLCHAIN=go1.26.0`）+ Wails v3.0.0-beta.24（`ui_desktop.go`，构建标签 `!win7`） |
-| Windows 7 外壳 | 同一份代码，`-tags win7`（`ui_win7.go`），用 go-legacy-win7 编译，界面在 Chrome 109 里打开 |
+| 外壳 | Go 1.26.0（`GOTOOLCHAIN=go1.26.0`）+ Wails v3.0.0-beta.24（`ui_desktop.go`） |
 | 界面 | 原生 HTML/CSS/JS，没有构建步骤，`embed` 进二进制（`frontend/`） |
-| 刷机 | 纯 Go：`internal/esp`（ESP 串口协议 + esp-flasher-stub）、`internal/device`（任务），在 App 进程内运行。**没有 Python、没有 esptool** |
+| 刷机 | 纯 Go：`pkg/esp`（ESP 串口协议 + esp-flasher-stub）、`pkg/device`（任务），在 App 进程内运行。**没有 Python、没有 esptool** |
 | 串口 | `go.bug.st/serial` v1.8.0 |
 
 ## 目录地图
@@ -26,13 +26,11 @@
 ```
 main.go               启动、命令行参数（-headless -listen -state-dir -origin -self-test）、127.0.0.1 调试服务
 ui_desktop.go         Wails 窗口（macOS / Win10+）
-ui_win7.go            Windows 7 版：Chrome --app 窗口、PowerShell 选文件夹、驱动安装
 frontend/             index.html app.css app.js（单文件 SPA，含全部中英文案）
 internal/
   esp/                ESP32-C3 串口协议：SLIP、命令、同步、复位、stub、压缩写、读、MD5、看门狗复位
     stub/             esp32c3.json（esp-flasher-stub v1.4.1，Apache-2.0/MIT）+ 许可证
   device/             设备任务：刷入玩法、恢复出厂、备份固件、自动抓设备、Code 43、重启确认
-  driver/             Windows 7/8 串口驱动检测与安装（内置 usbser INF）
   flasher/            任务管理器：同一时间一个任务、状态快照、取消规则
   factory/            内置出厂固件（4 段）、分段表、身份区保护
   firmware/           玩法镜像校验（0xE9、chip_id 0x0005、大小、SHA-256）
@@ -41,8 +39,7 @@ internal/
   desktop/            本地 JSON API（/api/*，X-Plays-Token 鉴权）、媒体文件、内嵌界面
   settings/ instance/ 设置文件、单实例锁
 scripts/              打包脚本（见 docs/RELEASE.md）
-docs/                 WINDOWS-BUILD.md（Win10+ 打包）、WINDOWS-7.md（Win7 版和驱动）、RELEASE.md（发版）
-drivers/windows7/     原始的 JTAG 驱动 zip（只覆盖 MI_02 接口）
+docs/                 WINDOWS-BUILD.md（Win10+ 打包）、RELEASE.md（发版）
 PLAN.md               最初的开发方案、已确认的决定、待办
 ```
 
@@ -51,13 +48,11 @@ PLAN.md               最初的开发方案、已确认的决定、待办
 ```sh
 export GOTOOLCHAIN=go1.26.0
 go vet ./... && go test -race ./...            # 改完代码必跑
-GOOS=windows go vet ./...                      # Windows 专用代码（driver、hints、diskfree）
+GOOS=windows go vet ./...                      # Windows 专用代码（hints、diskfree）
 go run . -headless -listen 127.0.0.1:47811 -state-dir /tmp/plays-state   # 浏览器里调界面
 go run . -self-test                            # 检查内置 stub 和出厂固件
 node -e "new Function(require('fs').readFileSync('frontend/app.js','utf8'))"  # 改 app.js 后做语法检查
 ```
-
-Windows 7 构建检查：`scripts/package-win7.sh` 会下载固定版本的 go-legacy-win7 并 `vet` + 编译 x64 和 x86。
 
 macOS 链接时出现大量 `ld: warning: ... built for newer 'macOS' version` 是正常的，可以忽略。
 
@@ -66,18 +61,18 @@ macOS 链接时出现大量 `ld: warning: ... built for newer 'macOS' version` �
 Espressif QEMU（`espressif/qemu` 的 `esp-develop-9.2.2`，riscv32）可以模拟停在下载模式的 8 MB ESP32-C3，命令见 README"用 QEMU 测试刷机协议"。然后：
 
 ```sh
-ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./internal/esp/ ./internal/device/
+ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./pkg/esp/ ./pkg/device/
 ```
 
-`internal/device` 的 QEMU 测试做一次完整恢复出厂（含 8 MB 备份，约 1.5 分钟）和一次备份。QEMU 测不到 DTR/RTS 复位和真实波特率切换。
+`pkg/device` 的 QEMU 测试做一次完整恢复出厂（含 8 MB 备份，约 1.5 分钟）和一次备份。QEMU 测不到 DTR/RTS 复位和真实波特率切换。
 
 ### 真机测试（只在用户同意后）
 
-`internal/device/real_test.go` 默认跳过：
+`pkg/device/real_test.go` 默认跳过：
 
 ```sh
-ESP_REAL_PORT=/dev/cu.usbmodem1101 go test -count=1 -v -run TestRealDevice ./internal/device/   # 只读：连接、stub、复位
-ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./internal/device/   # 只读：完整备份
+ESP_REAL_PORT=/dev/cu.usbmodem1101 go test -count=1 -v -run TestRealDevice ./pkg/device/   # 只读：连接、stub、复位
+ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./pkg/device/   # 只读：完整备份
 ```
 
 ## 必须遵守的规则
@@ -97,8 +92,13 @@ ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./int
 - 后端事件类型：`stage`、`identified`、`progress`、`log`、`hint`、`cardid`、`complete`；错误用 `device.CodedError{Code}`。前端用 `err_<code>` 翻译错误（`errText`），新增错误码时**同时加中英文案**。
 - 阶段名（`preparing waiting connecting checking backup writing verifying cardid resetting done failed cancelled`）被前端直接使用，改名要同步改 `frontend/app.js`。
 - 所有用户可见的文字都要中英两份。
-- 界面必须能在 **Chrome 109** 上跑（Windows 7 版）：不要用 Chrome 110 以后才有的 JS/CSS（例如 `Array.prototype.toSorted`、CSS 嵌套、`@scope`、`text-wrap: balance`）。
-- API 只监听 `127.0.0.1`（headless / Win7 版），请求要带 `X-Plays-Token`。
+- headless 调试模式只监听 `127.0.0.1`，API 请求要带 `X-Plays-Token`。
+
+### `pkg/` 是公开 API
+
+- `pkg/` 下的包（`core esp device factory firmware flasher library settings syncer instance`）被 Windows 7 客户端 [ai-passport-desktop-windows7](https://github.com/FoloToy/ai-passport-desktop-windows7) 直接引用。改导出的类型、函数签名或行为时，要同时考虑那边，并在那边升级依赖。
+- 前端无关的逻辑（检查、开始任务、目录切换）放在 `pkg/core`；`internal/desktop` 只做 HTTP/JSON 转换。两个客户端走同一套检查，不要在任何一边绕过 `core` 直接启动设备任务。
+- `pkg/` 必须能用 go-legacy-win7（Go 1.26 + Windows 7 补丁）为 `windows/386` 和 `windows/amd64` 编译：不要引入只支持 Windows 10 的系统调用或依赖（例如 WebView2）。
 
 ### 文件格式
 
@@ -111,7 +111,7 @@ ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./int
 
 ### 许可证
 
-- `internal/esp` 是自己写的 Go 代码，但协议细节参照 esptool（GPL-2.0-or-later）；不要从 esptool 复制源代码进来。stub 只用 `stub/esp32c3.json`（v2，Apache/MIT），**不要用 esptool 的 v1 stub（GPL）**。改动依赖时更新 `THIRD_PARTY.md`。
+- `pkg/esp` 是自己写的 Go 代码，但协议细节参照 esptool（GPL-2.0-or-later）；不要从 esptool 复制源代码进来。stub 只用 `stub/esp32c3.json`（v2，Apache/MIT），**不要用 esptool 的 v1 stub（GPL）**。改动依赖时更新 `THIRD_PARTY.md`。
 
 ### Git
 
@@ -127,5 +127,4 @@ ESP_REAL_BACKUP_DIR=<目录> go test -count=1 -v -run TestRealDeviceBackup ./int
 
 - 刷入玩法和恢复出厂的**写入流程还没有在真机上跑过**（只在 QEMU 上验证）；读、备份、两种自动重启已在真机验证。
 - Intel Mac 版只在 Rosetta 下自检过。
-- Windows 7 版没有在 Windows 7 真机上验收；驱动 INF 没有签名目录（.cat）。
 - 待办以 `PLAN.md` 第 13 节为准，完成一项就更新那里。

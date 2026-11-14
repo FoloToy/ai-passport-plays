@@ -14,14 +14,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/desktop"
-	"github.com/FoloToy/ai-passport-plays/internal/device"
-	"github.com/FoloToy/ai-passport-plays/internal/esp"
-	"github.com/FoloToy/ai-passport-plays/internal/factory"
-	"github.com/FoloToy/ai-passport-plays/internal/flasher"
-	"github.com/FoloToy/ai-passport-plays/internal/instance"
-	"github.com/FoloToy/ai-passport-plays/internal/settings"
-	"github.com/FoloToy/ai-passport-plays/internal/syncer"
+	"github.com/FoloToy/ai-passport-desktop/internal/desktop"
+	"github.com/FoloToy/ai-passport-desktop/pkg/device"
+	"github.com/FoloToy/ai-passport-desktop/pkg/esp"
+	"github.com/FoloToy/ai-passport-desktop/pkg/factory"
+	"github.com/FoloToy/ai-passport-desktop/pkg/flasher"
+	"github.com/FoloToy/ai-passport-desktop/pkg/instance"
+	"github.com/FoloToy/ai-passport-desktop/pkg/settings"
+	"github.com/FoloToy/ai-passport-desktop/pkg/syncer"
 )
 
 var version = "0.4.1-dev"
@@ -54,8 +54,7 @@ func main() {
 	}
 	unlock, err := instance.Acquire(dir)
 	if err != nil {
-		alreadyRunning(dir, err)
-		return
+		log.Fatal(err)
 	}
 	defer unlock()
 
@@ -87,9 +86,8 @@ func reveal(path string) error {
 	}
 }
 
-// serveLoopback serves the UI on a private 127.0.0.1 listener (development, and the
-// Windows 7 edition, which shows it in Chrome). ready gets the page URL. The server
-// stops when the process exits.
+// serveLoopback serves the UI on a private 127.0.0.1 listener for development.
+// ready gets the page URL. The server stops when the process exits.
 func serveLoopback(server *desktop.Server, address string, sync *syncer.Manager, ready func(url string)) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil || host != "127.0.0.1" {
@@ -120,7 +118,7 @@ func serveLoopback(server *desktop.Server, address string, sync *syncer.Manager,
 	ready("http://" + listener.Addr().String() + "/")
 }
 
-// interrupted is closed by Ctrl+C or, on Windows, by closing the console window.
+// interrupted is closed by Ctrl+C.
 func interrupted() <-chan os.Signal {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -137,5 +135,5 @@ func runSelfTest() {
 		fmt.Fprintln(os.Stderr, "self-test failed:", err)
 		os.Exit(1)
 	}
-	fmt.Printf(`{"passed":true,"version":%q,"edition":%q,"chip":"ESP32-C3","stub_bytes":%d,"factory":%q}`+"\n", version, edition, stub, factory.Version)
+	fmt.Printf(`{"passed":true,"version":%q,"chip":"ESP32-C3","stub_bytes":%d,"factory":%q}`+"\n", version, stub, factory.Version)
 }

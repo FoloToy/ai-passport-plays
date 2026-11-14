@@ -4,6 +4,8 @@
 
 The offline desktop edition of the AI Passport App Library. It downloads every play, image and firmware to your computer, then lets you browse and install plays to an AI Passport over USB without a network.
 
+支持 macOS 和 Windows 10/11。Windows 7 / 8 / 8.1 请用单独的原生客户端 [ai-passport-desktop-windows7](https://github.com/FoloToy/ai-passport-desktop-windows7)。
+
 ## 功能
 
 - **主页**：官方精选、专题页签（多人玩法 / 亲子益智 / 日常办公）、搜索、排序（最新 / 下载 / 点赞 / 讨论），布局与网站一致。
@@ -33,7 +35,7 @@ The offline desktop edition of the AI Passport App Library. It downloads every p
 
 ## 恢复出厂
 
-用于刷入玩法后设备无法启动、反复重启、连上电脑后很快断开等情况。出厂固件 `AI-Passport-Factory-Default-v1.1.2` 内置在 App 里（`internal/factory/firmware/`，约 3.7 MB），不需要联网。
+用于刷入玩法后设备无法启动、反复重启、连上电脑后很快断开等情况。出厂固件 `AI-Passport-Factory-Default-v1.1.2` 内置在 App 里（`pkg/factory/firmware/`，约 3.7 MB），不需要联网。
 
 流程（与原恢复工具一致）：
 
@@ -54,7 +56,7 @@ The offline desktop edition of the AI Passport App Library. It downloads every p
 
 备份默认保存在 `~/Documents/FoloToy恢复出厂备份/`（与原工具相同，可在恢复出厂页更改），每次恢复一个子目录 `<时间>-<MAC>/`，里面有日志和恢复报告。
 
-更新出厂固件时：替换 `internal/factory/firmware/` 里的文件，同时更新 `internal/factory/factory.go` 里的大小、SHA-256 和版本号，再用真机验证。
+更新出厂固件时：替换 `pkg/factory/firmware/` 里的文件，同时更新 `pkg/factory/factory.go` 里的大小、SHA-256 和版本号，再用真机验证。
 
 > **刷入玩法和身份区**：社区玩法是从 `0x0` 写入的合并镜像。超过 `0x356000`（约 3.3 MB）的镜像会覆盖身份区。刷入这类玩法前，App 会先把设备当前的身份区备份到 `<备份目录>/cardid/<MAC>/`，覆盖了有内容的身份区时会在刷机结果里提示。
 
@@ -77,13 +79,16 @@ avatars/<name>.webp        作者头像
 沿用 [Magic-Flash](https://github.com/FoloToy/Magic-Flash) 的结构：
 
 - **Go + Wails v3** 桌面外壳。界面是打包进程序的原生 HTML/CSS/JS（`frontend/`），作为 Wails 的资源处理器提供，**不监听任何网络端口**。
-- `internal/esp`：用 Go 实现的 ESP32-C3 串口刷机协议（ROM 引导程序握手、上传 flasher stub、压缩写入、读取、MD5 校验、复位），参照 esptool 的协议。内置的 flasher stub 来自 esp-flasher-stub（Apache-2.0 / MIT）。不需要 Python 或 esptool。
-- `internal/device`：在 App 进程里运行的设备任务：刷入玩法、恢复出厂、固件备份、自动抓取设备（含 Windows Code 43 处理）。
-- `internal/syncer`：社区接口、两阶段下载、限流退避、目录迁移。
-- `internal/firmware`：ESP32-C3 镜像头、大小、SHA-256 校验。
-- `internal/flasher`：单台设备任务（刷入玩法或恢复出厂）和进度，同一时间只运行一个。
-- `internal/factory`：内置出厂固件、分段表和身份区保护检查。
-- `internal/desktop`：本地 JSON API（带会话 token）、媒体文件、内嵌界面。
+- `pkg/esp`：用 Go 实现的 ESP32-C3 串口刷机协议（ROM 引导程序握手、上传 flasher stub、压缩写入、读取、MD5 校验、复位），参照 esptool 的协议。内置的 flasher stub 来自 esp-flasher-stub（Apache-2.0 / MIT）。不需要 Python 或 esptool。
+- `pkg/device`：在 App 进程里运行的设备任务：刷入玩法、恢复出厂、固件备份、自动抓取设备（含 Windows Code 43 处理）。
+- `pkg/syncer`：社区接口、两阶段下载、限流退避、目录迁移。
+- `pkg/firmware`：ESP32-C3 镜像头、大小、SHA-256 校验。
+- `pkg/flasher`：单台设备任务（刷入玩法或恢复出厂）和进度，同一时间只运行一个。
+- `pkg/factory`：内置出厂固件、分段表和身份区保护检查。
+- `pkg/core`：和界面无关的 App 逻辑（设置、玩法库索引、开始刷机/恢复/备份前的检查）。
+- `internal/desktop`：本地 JSON API（带会话 token）、媒体文件、内嵌界面，调用 `pkg/core`。
+
+`pkg/` 下的包是公开的：Windows 7/8/8.1 的原生客户端 [ai-passport-desktop-windows7](https://github.com/FoloToy/ai-passport-desktop-windows7) 直接引用它们，所以两边的刷机和安全检查是同一份代码。
 
 ## 开发
 
@@ -113,10 +118,10 @@ qemu-system-riscv32 -nographic -machine esp32c3 \
   -global driver=esp32c3.gpio,property=strap_mode,value=0x02 \
   -serial tcp:127.0.0.1:5555,server,nowait
 
-ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./internal/esp/ ./internal/device/
+ESP_QEMU_ADDR=127.0.0.1:5555 go test -count=1 -run QEMU ./pkg/esp/ ./pkg/device/
 ```
 
-`flash.bin` 必须正好 2/4/8/16 MB。`internal/device` 的 QEMU 测试会做一次完整的恢复出厂（含 8 MB 全量备份）和一次固件备份。
+`flash.bin` 必须正好 2/4/8/16 MB。`pkg/device` 的 QEMU 测试会做一次完整的恢复出厂（含 8 MB 全量备份）和一次固件备份。
 
 ## 打包（macOS）
 
@@ -139,7 +144,7 @@ ALLOW_DIRTY=1 scripts/package-mac.sh   # 有未提交改动时也打包
 
 ## 打包（Windows）
 
-在 Windows 10/11 x64 上运行（这个版本只支持 Windows 10 及以上；Windows 7/8/8.1 有单独的版本，见下一节）：
+在 Windows 10/11 x64 上运行（这个版本只支持 Windows 10 及以上）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1          # 安装依赖并打包
@@ -148,16 +153,6 @@ powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload  #
 
 会生成 `dist\windows\` 下的 Setup.exe 安装包和免安装 ZIP。完整步骤和排错见 [docs/WINDOWS-BUILD.md](docs/WINDOWS-BUILD.md)。
 
-## 打包（Windows 7 / 8 / 8.1）
-
-在 Mac（或 Linux）上就能打包，不需要 Windows：
-
-```sh
-scripts/package-win7.sh                 # 生成 dist/win7/ 下 x64 和 x86 两个 ZIP
-```
-
-脚本会下载固定版本的 go-legacy-win7（打了 Windows 7 补丁的 Go）并校验 SHA-256，用 `-tags win7` 编译。这个版本的界面在 Chrome 109 里打开，能检测并安装串口驱动。详见 [docs/WINDOWS-7.md](docs/WINDOWS-7.md)。
-
 ## 许可证
 
-本项目的源代码以 [MIT 许可证](LICENSE) 发布。第三方组件、内置的 FoloToy 出厂固件（`internal/factory/firmware/`）和 Espressif 驱动（`drivers/windows7/`）不在 MIT 范围内，各自的来源和许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+本项目的源代码以 [MIT 许可证](LICENSE) 发布。第三方组件、内置的 FoloToy 出厂固件（`pkg/factory/firmware/`）不在 MIT 范围内，各自的来源和许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FoloToy/ai-passport-plays/internal/settings"
+	"github.com/FoloToy/ai-passport-desktop/pkg/settings"
 )
 
 const IndexVersion = 1

@@ -17,8 +17,8 @@
 | --- | --- |
 | 桌面外壳 | Go 1.26 + Wails v3（与 Magic-Flash 同版本） |
 | 界面 | 原生 HTML/CSS/JS，`embed` 打包进二进制，不开 HTTP 端口 |
-| 刷机 | Go 实现的 ESP32 串口协议（`internal/esp`）+ esp-flasher-stub（Apache/MIT），在 App 进程内运行（2026-11-12 起；之前是 PyInstaller 打包的 Python esptool worker） |
-| 单实例 | 复用 Magic-Flash `internal/instance` |
+| 刷机 | Go 实现的 ESP32 串口协议（`pkg/esp`）+ esp-flasher-stub（Apache/MIT），在 App 进程内运行（2026-11-12 起；之前是 PyInstaller 打包的 Python esptool worker） |
+| 单实例 | 复用 Magic-Flash `pkg/instance` |
 | 打包 | 复用 `scripts/package-mac.sh`、`package-windows.ps1`、Inno Setup、GitHub Actions |
 
 ## 3. 数据源（已实测，无需登录）
@@ -39,6 +39,8 @@ Flash 大小 8MB，从 `0x0` 写入。平均约 2.5MB，最大 8MB，总量约 3
 > 并给桌面端单独的 User-Agent，便于统计和限流。首版先用现有公开接口。
 
 ## 4. 目录结构
+
+> 这是最初的方案，现在的目录以 `AGENTS.md` 的目录地图为准。
 
 ```
 ai-passport-plays/
@@ -127,7 +129,7 @@ worker 端（esptool）：
 - 刷机：单台；只支持 AI Passport，刷机前检查芯片必须是 ESP32-C3。
 - 设备 USB 免驱（与浏览器 Web Serial 刷机一致）。
 - 界面中英文；"分类特别难"指"分类 + 专题"。
-- 技术栈沿用 Magic-Flash；项目名"AI Passport 玩法社区"，仓库 FoloToy/ai-passport-plays（2026-11-13 起公开，MIT）。
+- 技术栈沿用 Magic-Flash；项目名"AI Passport 玩法社区"，仓库 FoloToy/ai-passport-desktop（2026-11-13 起公开，MIT；2026-11-14 由 ai-passport-plays 改名）。
 
 ## 11. 实施中发现的问题
 
@@ -142,18 +144,18 @@ worker 端（esptool）：
 
 原 FoloToy-AI-Passport-Factory-Restore（Windows、Tkinter、esptool 4.12、v1.5.2）整合进本 App，之后关闭原仓库。
 
-- 出厂固件 `AI-Passport-Factory-Default-v1.1.2` 内置在 Go 程序中（`internal/factory`），启动恢复时解压并校验。
-- 恢复流程最初移植到 `worker/restore.py`（esptool 5.6 Python API），2026-11-12 改写为 Go（`internal/device`），整个流程只连接一次。安全规则不变：分段写入、不擦除、不写身份区、写前备份、写后校验、身份区前后一致。
+- 出厂固件 `AI-Passport-Factory-Default-v1.1.2` 内置在 Go 程序中（`pkg/factory`），启动恢复时解压并校验。
+- 恢复流程最初移植到 `worker/restore.py`（esptool 5.6 Python API），2026-11-12 改写为 Go（`pkg/device`），整个流程只连接一次。安全规则不变：分段写入、不擦除、不写身份区、写前备份、写后校验、身份区前后一致。
 - 自动抓取设备的逻辑（5 ms 级 DTR/RTS 复位、Windows Code 43 处理）原样保留；macOS 只使用 `/dev/cu.*`。
 - 写入开始后不能停止。刷入玩法和恢复出厂共用一个任务槽，同时只能运行一个。
 - 2026-11-11：新增"备份固件"（只读，读整片 Flash 并与设备端 MD5 核对），与恢复出厂放在同一个"设备工具"页，复用同一套自动找设备逻辑。
 
 ## 13. 待办
 
-- Windows 安装包：脚本已写好（`scripts/build-on-windows.ps1`，见 `docs/WINDOWS-BUILD.md`），待在真实 Windows 上运行和验收。
+- Windows 安装包：已在 Windows 11 上打包（v0.4.1），安装版的界面和刷机还待真机验收。
 - Developer ID 签名、公证；Windows 代码签名。
 - 实机刷机验收（需要连接 AI Passport）。
 - Go 刷机（2026-11-12 替换 Python esptool）实机验收：刷入玩法、恢复出厂、备份固件、USB-JTAG 复位进下载模式、460800 波特率切换、Windows Code 43 抓取。目前只在 QEMU（esp-develop-9.2.2）上验证过。
-- Windows 7/8 版本（2026-11-12 完成，v0.4.0）：go-legacy-win7 编译、Chrome 109 显示界面、内置 usbser INF 一键安装驱动。待在 Windows 7 真机上验收，见 docs/WINDOWS-7.md 第 4 节。
+- Windows 7/8 版本：2026-11-14 从本仓库移出，改为独立的原生 Win32 客户端（FoloToy/ai-passport-desktop-windows7），共用本仓库 `pkg/` 下的刷机和同步代码。本仓库不再包含 Windows 7 相关代码。
 - 备份固件实机验收（macOS 和 Windows）。
 - 恢复出厂实机验收（macOS 和 Windows）：正常设备、USB 只短暂出现的设备、拔插后端口变化、同时连两台、端口被占用、完整恢复后身份区一致。

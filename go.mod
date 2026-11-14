@@ -1,4 +1,4 @@
-module github.com/FoloToy/ai-passport-plays
+module github.com/FoloToy/ai-passport-desktop
 
 go 1.26.0
 

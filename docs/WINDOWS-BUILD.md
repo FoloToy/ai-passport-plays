@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- macOS 版已经完成，`v0.4.1` Release 里有 DMG（v0.2.0 起新增恢复出厂，v0.3.0 新增备份固件，v0.4.0 刷机改用 Go、不再需要 Python，取代原 FoloToy-AI-Passport-Factory-Restore）：https://github.com/FoloToy/ai-passport-plays/releases/tag/v0.3.0
+- macOS 版已经完成，`v0.4.1` Release 里有 DMG（v0.2.0 起新增恢复出厂，v0.3.0 新增备份固件，v0.4.0 刷机改用 Go、不再需要 Python，取代原 FoloToy-AI-Passport-Factory-Restore）：https://github.com/FoloToy/ai-passport-desktop/releases/tag/v0.3.0
 - Windows 版的代码已经在 Mac 上验证过：交叉编译通过，`GOOS=windows go vet` 通过，全部测试代码能在 Windows 下编译。
 - **Windows 打包脚本还没有在真实 Windows 上跑过**，第一次运行可能需要修小问题，见文末"可能遇到的问题"。
 
@@ -32,8 +32,8 @@ winget install -e --id GitHub.cli --accept-package-agreements --accept-source-ag
 gh auth login            # 选 GitHub.com → HTTPS → 浏览器登录；上传 Release 需要仓库的写权限
 
 # 2. 克隆代码
-gh repo clone FoloToy/ai-passport-plays
-cd ai-passport-plays
+gh repo clone FoloToy/ai-passport-desktop
+cd ai-passport-desktop
 
 # 3. 一键安装依赖、打包、上传到 Release v0.4.1
 powershell -ExecutionPolicy Bypass -File scripts\build-on-windows.ps1 -Upload
